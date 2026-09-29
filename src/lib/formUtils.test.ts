@@ -75,7 +75,8 @@ describe('fieldsToForm', () => {
       not_show_in: null,
       actions: null,
       managed: true,
-      managed_version: '1'
+      managed_version: '1',
+      locale_name: null
     };
     const form = fieldsToForm(fields, 'stem');
     expect(form.name).toBe('Foo');

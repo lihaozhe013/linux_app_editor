@@ -137,6 +137,7 @@
       </span>
       <span class="managed-badges">
         {#if file.error}<span class="chip chip-warn">unreadable</span>{/if}
+        {#if file.name_is_locale}<span class="chip" title="Display name comes from a Name[...] locale key; the plain Name key is missing">locale name</span>{/if}
         {#if file.hidden || file.no_display}<span class="chip">hidden</span>{/if}
         {#if file.type_ && file.type_ !== 'Application'}<span class="chip">{file.type_}</span>{/if}
         {#if query.trim().length === 0}<span class="chip">{group.label}</span>{/if}

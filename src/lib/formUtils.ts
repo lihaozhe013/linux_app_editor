@@ -55,7 +55,9 @@ export function formToPatch(form: EntryForm): FieldPatch {
 
 export function fieldsToForm(fields: KnownFields, filenameStem = ''): EntryForm {
   return {
-    name: fields.name ?? '',
+    // Locale-name fallback: when the plain key is missing, prefilling the
+    // displayed name means a save writes a spec-compliant plain Name.
+    name: fields.name ?? fields.locale_name ?? '',
     executable: fields.exec?.executable ?? '',
     argumentsText: fields.exec ? argumentsToText(fields.exec.arguments) : '',
     icon: fields.icon ?? '',

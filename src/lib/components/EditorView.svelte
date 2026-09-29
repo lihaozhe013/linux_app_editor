@@ -158,6 +158,13 @@
       rewrite it from the fields.
     </div>
   {/if}
+  {#if !entry.fields.name && entry.fields.locale_name}
+    <div class="banner banner-warn">
+      This file has no plain Name key; the displayed name comes from a locale key such as
+      Name[en_US.UTF-8]. Spec-strict launchers may ignore it. The Name field is prefilled, so
+      saving will write a compliant plain Name key.
+    </div>
+  {/if}
   {#if entry.fields.type_ && entry.fields.type_ !== "Application"}
     <div class="banner banner-warn">
       Type is "{entry.fields.type_}"; this tool mainly targets Application entries, but editing

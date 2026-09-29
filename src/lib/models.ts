@@ -25,6 +25,8 @@ export interface KnownFields {
   actions: string[] | null;
   managed: boolean;
   managed_version: string | null;
+  /** First `Name[...]` value; set when editors write only the locale key. */
+  locale_name: string | null;
 }
 
 export interface EntryMeta {
@@ -137,6 +139,8 @@ export interface DesktopFileSummary {
   path: string;
   file_name: string;
   name: string | null;
+  /** True when the display name came from a `Name[...]` locale key. */
+  name_is_locale: boolean;
   icon: string | null;
   type_: string | null;
   no_display: boolean;
