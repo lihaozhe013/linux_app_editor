@@ -1,14 +1,12 @@
 <script lang="ts">
-  import { open } from "@tauri-apps/plugin-dialog";
-  import { openDesktopEntry } from "./lib/api";
-  import type { AppFailure, OpenedEntry } from "./lib/models";
   import CreateView from "./lib/components/CreateView.svelte";
-  import ManagedListView from "./lib/components/ManagedListView.svelte";
   import EditorView from "./lib/components/EditorView.svelte";
+  import ManagedListView from "./lib/components/ManagedListView.svelte";
+  import OpenView from "./lib/components/OpenView.svelte";
+  import type { OpenedEntry } from "./lib/models";
 
-  let tab = $state<"create" | "managed">("create");
+  let tab = $state<"create" | "managed" | "open">("create");
   let editing = $state<OpenedEntry | null>(null);
-  let openError = $state("");
 
   function openEditor(entry: OpenedEntry) {
     editing = entry;
@@ -23,26 +21,6 @@
       editing = { ...editing, path };
     }
   }
-
-  async function openFile() {
-    openError = "";
-    const path = await open({
-      multiple: false,
-      title: "Open .desktop file",
-      filters: [
-        { name: "Desktop Entry", extensions: ["desktop"] },
-        { name: "All files", extensions: ["*"] },
-      ],
-    });
-    if (typeof path !== "string" || path.length === 0) {
-      return;
-    }
-    try {
-      editing = await openDesktopEntry(path);
-    } catch (e) {
-      openError = (e as AppFailure).message;
-    }
-  }
 </script>
 
 <div class="app">
@@ -55,21 +33,21 @@
       <button type="button" class:active={tab === "managed"} onclick={() => (tab = "managed")}>
         Managed Launchers
       </button>
-      <button type="button" onclick={() => void openFile()}>Open .desktop…</button>
+      <button type="button" class:active={tab === "open"} onclick={() => (tab = "open")}>
+        Open .desktop
+      </button>
     </nav>
   </header>
-
-  {#if openError}
-    <div class="banner banner-error">{openError}</div>
-  {/if}
 
   <main>
     {#if editing}
       <EditorView entry={editing} onClose={closeEditor} onPathChanged={editorPathChanged} />
     {:else if tab === "create"}
       <CreateView />
-    {:else}
+    {:else if tab === "managed"}
       <ManagedListView onOpenEntry={openEditor} />
+    {:else}
+      <OpenView onOpenEntry={openEditor} />
     {/if}
   </main>
 </div>

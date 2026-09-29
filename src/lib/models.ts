@@ -131,6 +131,28 @@ export interface PathStatus {
   is_executable: boolean;
 }
 
+export type LocationKind = 'user' | 'system' | 'extra';
+
+export interface DesktopFileSummary {
+  path: string;
+  file_name: string;
+  name: string | null;
+  icon: string | null;
+  type_: string | null;
+  no_display: boolean;
+  hidden: boolean;
+  error: string | null;
+}
+
+export interface LocationGroup {
+  path: string;
+  label: string;
+  kind: LocationKind;
+  exists: boolean;
+  error: string | null;
+  files: DesktopFileSummary[];
+}
+
 /** Editable form state shared by the Create and Editor views. */
 export interface EntryForm {
   name: string;

@@ -5,6 +5,7 @@ import type {
   CreateOutcome,
   DfvResult,
   IconCandidate,
+  LocationGroup,
   ManagedItem,
   OpenedEntry,
   PathStatus,
@@ -69,4 +70,8 @@ export function findNearbyIcons(executable: string): Promise<IconCandidate[]> {
 
 export function statPath(path: string): Promise<PathStatus> {
   return call('stat_path', { path });
+}
+
+export function listDesktopLocations(): Promise<LocationGroup[]> {
+  return call('list_desktop_locations');
 }
