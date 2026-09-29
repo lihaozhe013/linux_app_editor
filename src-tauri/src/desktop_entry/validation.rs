@@ -76,7 +76,8 @@ pub fn validate_entry(
         Some(spec) => items.extend(check_executable(&spec.executable)),
     }
 
-    if let Some(icon) = icon.filter(|i| !i.is_empty() && i.starts_with('/') && !Path::new(i).exists())
+    if let Some(icon) =
+        icon.filter(|i| !i.is_empty() && i.starts_with('/') && !Path::new(i).exists())
     {
         items.push(warning(
             "icon-missing",
