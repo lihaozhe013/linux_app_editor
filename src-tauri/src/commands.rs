@@ -259,6 +259,13 @@ pub fn list_managed_launchers() -> AppResult<Vec<ManagedItem>> {
     Ok(items)
 }
 
+/// Read-only listing of well-known desktop-entry directories (XDG standard,
+/// autostart, Flatpak, Snap, Nix, /opt) with one level of file summaries.
+#[tauri::command]
+pub fn list_desktop_locations() -> Vec<crate::locations::LocationGroup> {
+    crate::locations::list_desktop_locations()
+}
+
 #[derive(Debug, Deserialize)]
 pub struct ValidateFormRequest {
     pub name: Option<String>,

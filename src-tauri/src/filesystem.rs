@@ -84,28 +84,8 @@ pub fn backup_file(path: &Path) -> AppResult<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::env_lock::{env_lock, remove_var, set_var};
     use std::os::unix::fs::PermissionsExt;
-    use std::sync::{Mutex, MutexGuard, OnceLock};
-
-    // Environment variables are process-global; tests that touch them are
-    // serialized through this lock, which also makes the `unsafe` env
-    // mutation below sound (edition 2024 marks set_var/remove_var unsafe).
-    fn env_lock() -> MutexGuard<'static, ()> {
-        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| Mutex::new(())).lock().unwrap()
-    }
-
-    macro_rules! set_var {
-        ($k:expr, $v:expr) => {
-            unsafe { std::env::set_var($k, $v) }
-        };
-    }
-
-    macro_rules! remove_var {
-        ($k:expr) => {
-            unsafe { std::env::remove_var($k) }
-        };
-    }
 
     #[test]
     fn absolute_xdg_data_home_wins() {
