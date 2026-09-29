@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Spacey App
+Exec="/opt/My Apps/spacey binary" "--profile=my profile" "file name.txt"
+Icon=/opt/My\sApps/spacey.png
+Terminal=false

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Dictionary
+Name[zh_CN]=词典
+Name[zh_TW]=詞典
+Comment=Look up words
+Comment[de]=Wörter nachschlagen
+Exec=gnome-dictionary
+Icon=accessories-dictionary
+Terminal=false
+Categories=GNOME;GTK;Utility;

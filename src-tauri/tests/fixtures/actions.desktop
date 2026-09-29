@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=Browser
+Exec=browser %u
+Icon=browser
+Actions=new-window;new-private-window;
+
+[Desktop Action new-window]
+Name=New Window
+Exec=browser --new-window
+
+[Desktop Action new-private-window]
+Name=New Private Window
+Name[zh_CN]=新建隐私窗口
+Exec=browser --private

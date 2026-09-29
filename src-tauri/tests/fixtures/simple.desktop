@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Simple App
+Comment=A minimal example
+Exec=simple-app --verbose
+Icon=simple-app
+Path=/home/user
+Terminal=false
+Categories=Utility;
+Keywords=simple;example;
+StartupNotify=true
+StartupWMClass=simple-app
+MimeType=text/plain;
+NoDisplay=false
+Hidden=false
+OnlyShowIn=GNOME;KDE;
+NotShowIn=XFCE;

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=File Thing
+TryExec=file-thing
+Exec=file-thing %F --url %u --icon %i --name %c --file %k --progress 50%%
+Icon=file-thing
+Terminal=false
+
+[Desktop Entry Copy]
+Type=Application
+Name=Secondary Group
+Exec=secondary

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Weird App
+Exec=weird-app
+Icon=weird
+X-GNOME-UsesNotifications=true
+X-Flatpak=org.example.Weird
+X-KDE-RunOnDiscreteGpu=true
+X-Custom-Vendor-Key=whatever
+Terminal=false

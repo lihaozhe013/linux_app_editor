@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Flat App
+Exec=flatpak run --branch=stable --arch=x86_64 --command=flat-app --file-forwarding org.example.FlatApp @@u %u @@
+Icon=org.example.FlatApp
+Terminal=false
+Categories=Utility;
+X-Flatpak=org.example.FlatApp
+X-Flatpak-RenamedFrom=org.example.OldApp

@@ -1,0 +1,12 @@
+# leading comment
+[Desktop Entry]
+Type=Application
+Name=Tabs\sand\sEscapes
+Name=Second Wins
+Exec=weird
+Icon=
+Comment=Multi\nline\tvalue
+X-Empty=
+not a valid line at all
+
+# trailing comment
