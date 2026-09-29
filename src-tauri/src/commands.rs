@@ -68,7 +68,7 @@ pub fn create_launcher(req: CreateLauncherRequest) -> AppResult<CreateOutcome> {
     let mut file = DesktopFile::new_entry_file();
     file.set_raw("Version", SPEC_VERSION_VALUE);
     file.set_raw("Type", "Application");
-    file.set_raw("Name", &escape_string(&req.name));
+    file.set_raw("Name", &escape_string(req.name.trim()));
     if let Some(comment) = non_empty(&req.comment) {
         file.set_raw("Comment", &escape_string(comment));
     }
