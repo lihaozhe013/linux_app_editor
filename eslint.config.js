@@ -10,6 +10,17 @@ export default defineConfig(
   ...tseslint.configs.recommended,
   ...svelte.configs['flat/recommended'],
   {
+    files: ['**/*.svelte'],
+    languageOptions: {
+      parserOptions: {
+        parser: tseslint.parser,
+        extraFileExtensions: ['.svelte'],
+        sourceType: 'module',
+        ecmaVersion: 'latest'
+      }
+    }
+  },
+  {
     languageOptions: {
       globals: { ...globals.browser }
     },
