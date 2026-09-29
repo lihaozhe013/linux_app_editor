@@ -372,14 +372,16 @@ mod tests {
         assert_eq!(user_group.files.len(), 1);
         assert_eq!(user_group.files[0].file_name, "real.desktop");
 
-        // Missing directories still appear, with no files and no error.
-        let snap = groups
-            .iter()
-            .find(|g| g.path == Path::new("/var/lib/snapd/desktop/applications"))
-            .unwrap();
-        assert!(!snap.exists);
-        assert!(snap.files.is_empty());
-        assert!(snap.error.is_none());
+        // Directories that do not exist still appear, with no files and no
+        // error. The second XDG data dir is never created by this test, so
+        // the assertion stays independent of whatever the host has installed
+        // (CI runners ship snapd, so hardcoded absolute paths are not usable).
+        let missing =
+            PathBuf::from(guard.data_dirs.split(':').nth(1).unwrap()).join("applications");
+        let group = groups.iter().find(|g| g.path == missing).unwrap();
+        assert!(!group.exists);
+        assert!(group.files.is_empty());
+        assert!(group.error.is_none());
     }
 
     #[test]
