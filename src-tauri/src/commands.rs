@@ -247,7 +247,7 @@ pub fn list_managed_launchers() -> AppResult<Vec<ManagedItem>> {
         items.push(ManagedItem {
             file_name: entry.file_name().to_string_lossy().into_owned(),
             path,
-            name: fields.name,
+            name: crate::desktop_entry::fields::display_name(&file),
             icon: fields.icon,
             exec: fields.exec.map(|e| e.executable),
             terminal: fields.terminal.unwrap_or(false),

@@ -67,6 +67,9 @@ pub struct KnownFields {
     pub actions: Option<Vec<String>>,
     pub managed: bool,
     pub managed_version: Option<String>,
+    /// First `Name[...]` locale value, used when the plain `Name` key is
+    /// missing (some editors, e.g. AppEditor, write only the locale key).
+    pub locale_name: Option<String>,
 }
 
 fn unescape_string(v: &str) -> String {
@@ -149,6 +152,27 @@ fn split_list(v: &str) -> Vec<String> {
         .collect()
 }
 
+fn first_locale_value(file: &DesktopFile, key_name: &str) -> Option<String> {
+    use super::model::Item;
+    file.entry_group()?
+        .items
+        .iter()
+        .find_map(|item| match item {
+            Item::Entry { key, value } if key.name == key_name && key.locale.is_some() => {
+                Some(unescape_string(value))
+            }
+            _ => None,
+        })
+}
+
+/// Display name following the fallback chain Cinnamon/glib use: the plain
+/// `Name` key first, then the first `Name[...]` locale key.
+pub fn display_name(file: &DesktopFile) -> Option<String> {
+    file.get_raw("Name")
+        .map(unescape_string)
+        .or_else(|| first_locale_value(file, "Name"))
+}
+
 pub fn read_fields(file: &DesktopFile) -> KnownFields {
     let string = |key: &str| file.get_raw(key).map(unescape_string);
     let boolean = |key: &str| file.get_raw(key).and_then(parse_bool);
@@ -192,6 +216,7 @@ pub fn read_fields(file: &DesktopFile) -> KnownFields {
         actions: list("Actions"),
         managed: boolean(MANAGED_KEY).unwrap_or(false),
         managed_version: file.get_raw(MANAGED_VERSION_KEY).map(str::to_string),
+        locale_name: first_locale_value(file, "Name"),
     }
 }
 
@@ -299,6 +324,23 @@ mod tests {
         assert_eq!(f.name.as_deref(), Some("My App"));
         assert_eq!(f.terminal, Some(true));
         assert_eq!(f.categories, Some(vec!["Dev".into(), "Tool".into()]));
+    }
+
+    #[test]
+    fn display_name_falls_back_to_locale_key() {
+        // AppEditor-style file: only a locale key, no plain Name.
+        let file = parse("[Desktop Entry]\nName[en_US.UTF-8]=Geared Term\n");
+        assert_eq!(display_name(&file).as_deref(), Some("Geared Term"));
+        let f = read_fields(&file);
+        assert_eq!(f.name, None);
+        assert_eq!(f.locale_name.as_deref(), Some("Geared Term"));
+
+        // Plain Name wins over the locale key.
+        let file = parse("[Desktop Entry]\nName=Plain\nName[de]=Anders\n");
+        assert_eq!(display_name(&file).as_deref(), Some("Plain"));
+        let f = read_fields(&file);
+        assert_eq!(f.name.as_deref(), Some("Plain"));
+        assert_eq!(f.locale_name.as_deref(), Some("Anders"));
     }
 
     #[test]

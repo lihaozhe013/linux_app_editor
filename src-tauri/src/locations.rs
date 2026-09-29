@@ -30,7 +30,10 @@ pub enum LocationKind {
 pub struct DesktopFileSummary {
     pub path: PathBuf,
     pub file_name: String,
+    /// Plain `Name`, falling back to the first `Name[...]` locale key (the
+    /// chain Cinnamon/glib use); `name_is_locale` reports the fallback.
     pub name: Option<String>,
+    pub name_is_locale: bool,
     pub icon: Option<String>,
     pub type_: Option<String>,
     pub no_display: bool,
@@ -164,13 +167,15 @@ pub fn known_desktop_dirs() -> Vec<KnownDir> {
 fn summarize(path: &Path, content: &str) -> DesktopFileSummary {
     let file = parser::parse(content);
     let fields = read_fields(&file);
+    let name = fields.name.clone().or_else(|| fields.locale_name.clone());
     DesktopFileSummary {
         path: path.to_path_buf(),
         file_name: path
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default(),
-        name: fields.name,
+        name_is_locale: fields.name.is_none() && name.is_some(),
+        name,
         icon: fields.icon,
         type_: fields.type_,
         no_display: fields.no_display.unwrap_or(false),
@@ -229,6 +234,7 @@ fn scan_location(dir: &KnownDir, budget: &mut usize) -> LocationGroup {
                 path,
                 file_name: entry.file_name().to_string_lossy().into_owned(),
                 name: None,
+                name_is_locale: false,
                 icon: None,
                 type_: None,
                 no_display: false,
@@ -398,6 +404,29 @@ mod tests {
                 .as_deref()
                 .is_some_and(|e| e.contains("truncated"))
         );
+    }
+
+    #[test]
+    fn locale_only_name_is_used_for_display() {
+        let guard = EnvGuard::new();
+        let app_dir = guard.data_home.join("applications");
+        std::fs::create_dir_all(&app_dir).unwrap();
+        // AppEditor-style entry: Name exists only as a locale key.
+        std::fs::write(
+            app_dir.join("locale-name.desktop"),
+            "[Desktop Entry]\nType=Application\nName[en_US.UTF-8]=Geared Term\nExec=x\n",
+        )
+        .unwrap();
+
+        let groups = list_desktop_locations();
+        let user_group = groups.iter().find(|g| g.path == app_dir).unwrap();
+        let file = user_group
+            .files
+            .iter()
+            .find(|f| f.file_name == "locale-name.desktop")
+            .unwrap();
+        assert_eq!(file.name.as_deref(), Some("Geared Term"));
+        assert!(file.name_is_locale);
     }
 
     #[test]
