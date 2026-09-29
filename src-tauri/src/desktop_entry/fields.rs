@@ -93,7 +93,7 @@ fn unescape_string(v: &str) -> String {
     out
 }
 
-fn escape_string(v: &str) -> String {
+pub(crate) fn escape_string(v: &str) -> String {
     let mut out = String::with_capacity(v.len());
     for c in v.chars() {
         match c {
@@ -108,7 +108,7 @@ fn escape_string(v: &str) -> String {
 }
 
 /// Icon values must escape spaces as `\s` per the spec.
-fn escape_icon(v: &str) -> String {
+pub(crate) fn escape_icon(v: &str) -> String {
     let mut out = String::with_capacity(v.len());
     for c in escape_string(v).chars() {
         if c == ' ' {

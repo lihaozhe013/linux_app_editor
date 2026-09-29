@@ -18,6 +18,10 @@ pub enum AppError {
     HomeNotFound,
     #[error("invalid desktop filename: {0}")]
     InvalidFilename(String),
+    #[error("validation failed: {0}")]
+    Validation(String),
+    #[error("file already exists: {0}")]
+    AlreadyExists(PathBuf),
 }
 
 impl AppError {
@@ -37,6 +41,8 @@ impl AppError {
             },
             AppError::HomeNotFound => "home-not-found",
             AppError::InvalidFilename(_) => "invalid-filename",
+            AppError::Validation(_) => "validation-failed",
+            AppError::AlreadyExists(_) => "already-exists",
         }
     }
 }
