@@ -92,6 +92,21 @@ cargo clippy --all-targets
 cargo fmt
 ```
 
+## Nightly builds
+
+Pushing to the `publish` branch runs the release workflow (`.github/workflows/release.yml`): quality
+gates first, then native builds on `ubuntu-24.04` (x86_64) and `ubuntu-24.04-arm` (aarch64). The six
+assets are published to the rolling `nightly` release as a draft and only published after the full
+asset set is verified and the branch has not moved:
+
+```text
+linux-app-editor-linux-{x86_64,aarch64}.AppImage   self-contained
+linux-app-editor-linux-{x86_64,aarch64}.tar.gz     bare binary; needs GTK 3 + WebKitGTK 4.1
+linux-app-editor-linux-{x86_64,aarch64}.deb        Debian package (amd64/arm64)
+```
+
+The arm64 job requires the free GitHub-hosted arm runners (public repositories).
+
 ## Layout
 
 ```text

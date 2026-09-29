@@ -1,0 +1,291 @@
+name: Nightly release
+
+on:
+  push:
+    branches:
+      - publish
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  checks:
+    name: Quality gates
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7.0.1
+
+      - name: Install Linux build dependencies
+        uses: ./.github/actions/install-linux-deps
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2.2.0
+
+      - name: Cache Cargo
+        uses: actions/cache@v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-cargo-
+
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Frontend checks
+        run: |
+          bun run fmt:check
+          bun run lint
+          bun run check
+          bun test
+
+      - name: Rust checks
+        working-directory: src-tauri
+        run: |
+          cargo fmt --check
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo test --locked
+
+  build:
+    name: Linux ${{ matrix.arch }} packages
+    needs: checks
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    env:
+      # Let the AppImage tooling (linuxdeploy) run without FUSE on runners.
+      APPIMAGE_EXTRACT_AND_RUN: '1'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7.0.1
+
+      - name: Install Linux build dependencies
+        uses: ./.github/actions/install-linux-deps
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2.2.0
+
+      - name: Cache Cargo
+        uses: actions/cache@v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-cargo-
+
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build AppImage and deb
+        run: bun x tauri build --bundles appimage,deb
+
+      - name: Stage release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          arch="${{ matrix.arch }}"
+          mkdir -p staging
+
+          appimage="$(find src-tauri/target/release/bundle/appimage -maxdepth 1 -name '*.AppImage' -type f | head -n 1)"
+          deb="$(find src-tauri/target/release/bundle/deb -maxdepth 1 -name '*.deb' -type f | head -n 1)"
+          test -n "${appimage}" && test -n "${deb}"
+
+          cp -- "${appimage}" "staging/linux-app-editor-linux-${arch}.AppImage"
+          cp -- "${deb}" "staging/linux-app-editor-linux-${arch}.deb"
+
+          # Bare archive: binary plus docs; needs GTK 3 / WebKitGTK 4.1 at runtime.
+          pkg_dir="linux-app-editor-linux-${arch}"
+          mkdir -p "pack/${pkg_dir}"
+          install -m 0755 src-tauri/target/release/linux-app-editor "pack/${pkg_dir}/linux-app-editor"
+          strip "pack/${pkg_dir}/linux-app-editor"
+          cp README.md LICENSE "pack/${pkg_dir}/"
+          tar -czf "staging/linux-app-editor-linux-${arch}.tar.gz" -C pack "${pkg_dir}"
+
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: linux-${{ matrix.arch }}
+          path: staging/*
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Publish nightly release
+    needs:
+      - build
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: nightly-release
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
+      COMMIT_SHA: ${{ github.sha }}
+    steps:
+      - name: Download x86_64 packages
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: linux-x86_64
+          path: staging/x86_64
+
+      - name: Download aarch64 packages
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: linux-aarch64
+          path: staging/aarch64
+
+      - name: Validate release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp staging/x86_64/* staging/
+          cp staging/aarch64/* staging/
+          expected=(
+            linux-app-editor-linux-x86_64.AppImage
+            linux-app-editor-linux-x86_64.deb
+            linux-app-editor-linux-x86_64.tar.gz
+            linux-app-editor-linux-aarch64.AppImage
+            linux-app-editor-linux-aarch64.deb
+            linux-app-editor-linux-aarch64.tar.gz
+          )
+          for name in "${expected[@]}"; do
+            test -s "staging/${name}"
+          done
+          actual_count="$(find staging/x86_64 staging/aarch64 -type f | wc -l)"
+          if [[ "${actual_count}" -ne 6 ]]; then
+            echo "Expected six staged packages, found ${actual_count}."
+            exit 1
+          fi
+
+      - name: Skip stale builds
+        id: freshness
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch_sha="$(gh api "repos/${REPOSITORY}/branches/publish" --jq '.commit.sha')"
+          if [[ "${branch_sha}" != "${COMMIT_SHA}" ]]; then
+            echo "This run is stale; publish now points to ${branch_sha}."
+            echo "stale=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "stale=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Prepare rolling release
+        id: release_setup
+        if: steps.freshness.outputs.stale != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          releases_api="repos/${REPOSITORY}/releases"
+          release_body="Automated nightly build for commit ${COMMIT_SHA}."
+          release_body+=$'\n\n- AppImage: self-contained, run directly.'
+          release_body+=$'\n- tar.gz: bare binary; requires system GTK 3 and WebKitGTK 4.1 libraries.'
+          release_body+=$'\n- deb: Debian package (amd64/arm64).'
+
+          release_id="$(gh api --paginate "${releases_api}?per_page=100" --jq '.[] | select(.tag_name == "nightly") | .id' | head -n 1)"
+          if [[ -n "${release_id}" ]]; then
+            gh api --method PATCH "${releases_api}/${release_id}" \
+              -f name="Linux App Editor Nightly" \
+              -f "body=${release_body}" \
+              -F draft=true \
+              -F prerelease=true \
+              -f make_latest=false >/dev/null
+
+            asset_ids="$(gh api --paginate "${releases_api}/${release_id}/assets?per_page=100" --jq '.[].id')"
+            while IFS= read -r asset_id; do
+              if [[ -n "${asset_id}" ]]; then
+                gh api --method DELETE "${releases_api}/assets/${asset_id}" >/dev/null
+              fi
+            done <<< "${asset_ids}"
+          else
+            release_id="$(gh api --method POST "${releases_api}" \
+              -f tag_name=nightly \
+              -f "target_commitish=${COMMIT_SHA}" \
+              -f name="Linux App Editor Nightly" \
+              -f "body=${release_body}" \
+              -F draft=true \
+              -F prerelease=true \
+              -f make_latest=false \
+              --jq '.id')"
+          fi
+          echo "release_id=${release_id}" >> "${GITHUB_OUTPUT}"
+
+          tag_lookup_ref="repos/${REPOSITORY}/git/ref/tags/nightly"
+          tag_update_ref="repos/${REPOSITORY}/git/refs/tags/nightly"
+          if gh api "${tag_lookup_ref}" >/dev/null 2>&1; then
+            gh api --method PATCH "${tag_update_ref}" \
+              -f "sha=${COMMIT_SHA}" \
+              -F force=true >/dev/null
+          else
+            gh api --method POST "repos/${REPOSITORY}/git/refs" \
+              -f ref=refs/tags/nightly \
+              -f "sha=${COMMIT_SHA}" >/dev/null
+          fi
+
+      - name: Upload and publish release assets
+        if: steps.freshness.outputs.stale != 'true'
+        shell: bash
+        env:
+          RELEASE_ID: ${{ steps.release_setup.outputs.release_id }}
+        run: |
+          set -euo pipefail
+          gh release upload nightly \
+            staging/linux-app-editor-linux-x86_64.AppImage \
+            staging/linux-app-editor-linux-x86_64.deb \
+            staging/linux-app-editor-linux-x86_64.tar.gz \
+            staging/linux-app-editor-linux-aarch64.AppImage \
+            staging/linux-app-editor-linux-aarch64.deb \
+            staging/linux-app-editor-linux-aarch64.tar.gz \
+            --repo "${REPOSITORY}" \
+            --clobber
+
+          expected="$(printf '%s\n' \
+            linux-app-editor-linux-x86_64.AppImage \
+            linux-app-editor-linux-x86_64.deb \
+            linux-app-editor-linux-x86_64.tar.gz \
+            linux-app-editor-linux-aarch64.AppImage \
+            linux-app-editor-linux-aarch64.deb \
+            linux-app-editor-linux-aarch64.tar.gz | sort)"
+          actual="$(gh api --paginate "repos/${REPOSITORY}/releases/${RELEASE_ID}/assets?per_page=100" --jq '.[].name' | sort)"
+          if [[ "${actual}" != "${expected}" ]]; then
+            echo "Release assets do not match the expected set."
+            printf 'Expected:\n%s\nActual:\n%s\n' "${expected}" "${actual}"
+            exit 1
+          fi
+
+          branch_sha="$(gh api "repos/${REPOSITORY}/branches/publish" --jq '.commit.sha')"
+          if [[ "${branch_sha}" != "${COMMIT_SHA}" ]]; then
+            echo "The branch advanced during publication; leaving this release as a draft."
+            exit 0
+          fi
+
+          gh api --method PATCH "repos/${REPOSITORY}/releases/${RELEASE_ID}" \
+            -F draft=false \
+            -F prerelease=true \
+            -f make_latest=false >/dev/null
