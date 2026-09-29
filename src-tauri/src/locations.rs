@@ -31,6 +31,7 @@ pub struct DesktopFileSummary {
     pub path: PathBuf,
     pub file_name: String,
     pub name: Option<String>,
+    pub icon: Option<String>,
     pub type_: Option<String>,
     pub no_display: bool,
     pub hidden: bool,
@@ -170,6 +171,7 @@ fn summarize(path: &Path, content: &str) -> DesktopFileSummary {
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default(),
         name: fields.name,
+        icon: fields.icon,
         type_: fields.type_,
         no_display: fields.no_display.unwrap_or(false),
         hidden: fields.hidden.unwrap_or(false),
@@ -227,6 +229,7 @@ fn scan_location(dir: &KnownDir, budget: &mut usize) -> LocationGroup {
                 path,
                 file_name: entry.file_name().to_string_lossy().into_owned(),
                 name: None,
+                icon: None,
                 type_: None,
                 no_display: false,
                 hidden: false,
