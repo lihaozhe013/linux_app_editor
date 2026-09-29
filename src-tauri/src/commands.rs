@@ -10,14 +10,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::desktop_entry::exec::ExecSpec;
 use crate::desktop_entry::fields::{
-    apply_managed_markers, apply_patch, escape_icon, escape_string, read_fields, FieldPatch,
-    KNOWN_KEYS, SPEC_VERSION_VALUE,
+    FieldPatch, KNOWN_KEYS, SPEC_VERSION_VALUE, apply_managed_markers, apply_patch, escape_icon,
+    escape_string, read_fields,
 };
 use crate::desktop_entry::model::DesktopFile;
 use crate::desktop_entry::{parser, serializer, validation};
 use crate::error::{AppError, AppResult};
 use crate::filesystem::{applications_dir, atomic_write, backup_file};
-use crate::icons::{find_nearby_icons as scan_nearby_icons, IconCandidate};
+use crate::icons::{IconCandidate, find_nearby_icons as scan_nearby_icons};
 
 #[derive(Debug, Deserialize)]
 pub struct CreateLauncherRequest {
@@ -43,8 +43,7 @@ pub struct CreateOutcome {
 
 #[tauri::command]
 pub fn create_launcher(req: CreateLauncherRequest) -> AppResult<CreateOutcome> {
-    validation::validate_filename_stem(&req.filename_stem)
-        .map_err(AppError::InvalidFilename)?;
+    validation::validate_filename_stem(&req.filename_stem).map_err(AppError::InvalidFilename)?;
 
     let warnings = validation::validate_entry(
         Some(&req.name),
@@ -80,10 +79,7 @@ pub fn create_launcher(req: CreateLauncherRequest) -> AppResult<CreateOutcome> {
     if let Some(dir) = non_empty(&req.working_directory) {
         file.set_raw("Path", &escape_string(dir));
     }
-    file.set_raw(
-        "Terminal",
-        if req.terminal { "true" } else { "false" },
-    );
+    file.set_raw("Terminal", if req.terminal { "true" } else { "false" });
     if let Some(categories) = req.categories.as_ref().filter(|c| !c.is_empty()) {
         let mut joined = String::new();
         for c in categories {
@@ -95,7 +91,10 @@ pub fn create_launcher(req: CreateLauncherRequest) -> AppResult<CreateOutcome> {
     apply_managed_markers(&mut file);
 
     atomic_write(&target, serializer::serialize(&file).as_bytes())?;
-    Ok(CreateOutcome { path: target, warnings })
+    Ok(CreateOutcome {
+        path: target,
+        warnings,
+    })
 }
 
 #[derive(Debug, Serialize)]
@@ -182,7 +181,10 @@ pub fn save_desktop_entry(req: SaveRequest) -> AppResult<SaveOutcome> {
         backup_file(&target)?;
     }
     atomic_write(&target, serializer::serialize(&file).as_bytes())?;
-    Ok(SaveOutcome { path: target, warnings })
+    Ok(SaveOutcome {
+        path: target,
+        warnings,
+    })
 }
 
 #[tauri::command]
@@ -240,8 +242,7 @@ pub fn list_managed_launchers() -> AppResult<Vec<ManagedItem>> {
             continue;
         }
         let executable_missing = fields.exec.as_ref().is_some_and(|exec| {
-            exec.executable.contains('/')
-                && !Path::new(&exec.executable).exists()
+            exec.executable.contains('/') && !Path::new(&exec.executable).exists()
         });
         items.push(ManagedItem {
             file_name: entry.file_name().to_string_lossy().into_owned(),
@@ -300,7 +301,10 @@ pub fn run_desktop_file_validate(path: String) -> DfvResult {
     };
 
     let mut command = std::process::Command::new(exe);
-    command.arg(&path).stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::piped());
+    command
+        .arg(&path)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
     let Ok(mut child) = command.spawn() else {
         return DfvResult {
             available: false,

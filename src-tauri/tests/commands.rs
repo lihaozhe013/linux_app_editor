@@ -5,8 +5,8 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use linux_app_editor_lib::commands::{
-    create_launcher, delete_launcher, list_managed_launchers, open_desktop_entry,
-    save_desktop_entry, CreateLauncherRequest, SaveRequest,
+    CreateLauncherRequest, SaveRequest, create_launcher, delete_launcher, list_managed_launchers,
+    open_desktop_entry, save_desktop_entry,
 };
 use linux_app_editor_lib::desktop_entry::exec::ExecSpec;
 use linux_app_editor_lib::desktop_entry::fields::FieldPatch;
@@ -65,8 +65,10 @@ fn create_launcher_writes_expected_file() {
     assert!(content.contains("Version=1.5\n"));
     assert!(content.contains("Type=Application\n"));
     assert!(content.contains("Name=My App\n"));
-    assert!(content.contains("Exec=/opt/nonexistent/my-app --profile\\ dev\n")
-        || content.contains("Exec=/opt/nonexistent/my-app \"--profile dev\"\n"));
+    assert!(
+        content.contains("Exec=/opt/nonexistent/my-app --profile\\ dev\n")
+            || content.contains("Exec=/opt/nonexistent/my-app \"--profile dev\"\n")
+    );
     assert!(content.contains("Icon=my-app\n"));
     assert!(content.contains("Terminal=false\n"));
     assert!(content.contains("Categories=Development;Utility;\n"));
@@ -74,10 +76,12 @@ fn create_launcher_writes_expected_file() {
     assert!(content.contains("X-LauncherEditor-Version=1\n"));
 
     // Executable does not exist -> warning, but creation succeeded.
-    assert!(outcome
-        .warnings
-        .iter()
-        .any(|w| w.code == "executable-missing"));
+    assert!(
+        outcome
+            .warnings
+            .iter()
+            .any(|w| w.code == "executable-missing")
+    );
 }
 
 #[test]
@@ -105,7 +109,10 @@ fn open_returns_fields_and_meta() {
     .unwrap();
 
     let opened = open_desktop_entry(
-        xdg.app_dir().join("meta-app.desktop").to_string_lossy().into_owned(),
+        xdg.app_dir()
+            .join("meta-app.desktop")
+            .to_string_lossy()
+            .into_owned(),
     )
     .unwrap();
     assert_eq!(opened.fields.name.as_deref(), Some("My App"));
@@ -113,7 +120,10 @@ fn open_returns_fields_and_meta() {
     assert_eq!(opened.meta.locale_key_count, 0);
 
     let extra = open_desktop_entry(
-        xdg.app_dir().join("extra.desktop").to_string_lossy().into_owned(),
+        xdg.app_dir()
+            .join("extra.desktop")
+            .to_string_lossy()
+            .into_owned(),
     )
     .unwrap();
     assert_eq!(extra.meta.unknown_key_count, 1);
