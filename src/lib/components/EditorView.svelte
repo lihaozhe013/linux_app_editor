@@ -23,6 +23,10 @@
     onPathChanged: (path: string) => void;
   } = $props();
 
+  // Intentionally captures the initial value: the form is an editable copy,
+  // and later prop updates (e.g. Save As path changes) must not clobber
+  // in-progress edits.
+  // svelte-ignore state_referenced_locally
   let form = $state(fieldsToForm(entry.fields));
   let backup = $state(loadBackupToggle());
   let error = $state("");
