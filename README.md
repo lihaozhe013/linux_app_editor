@@ -2,9 +2,10 @@
 
 A small Linux desktop-entry creator/editor for manually installed applications.
 
-It is not a package manager or application manager. It does not scan your system, detect installed
+It is not a package manager or application manager. It does not watch your system, detect installed
 packages, or manage launchers created by other software. It does one job: create and edit `.desktop`
-files.
+files. The only thing it reads beyond files you open is a fixed list of well-known desktop entry
+directories, on demand, non-recursively and capped.
 
 ## Why
 
@@ -27,9 +28,11 @@ GNOME / KDE / Cinnamon / Xfce / rofi drun launcher
 - **Managed Launchers** — lists the files this tool created (marked with
   `X-LauncherEditor-Managed=true`). Only that directory is read, only non-recursively, and only for
   files carrying the marker.
-- **Open .desktop** — open and edit any desktop entry file, then Save or Save As. Unknown keys,
-  `X-*` keys, locale keys (`Name[zh_CN]`, …), `Desktop Action` sections and comments are preserved
-  on save.
+- **Open .desktop** — a read-only browser of every well-known desktop entry directory (XDG user and
+  system `applications`, autostart, Flatpak, Snap, Nix profiles, `/opt`), with fuzzy search over
+  name, filename and path. Open any entry from the list, or any file through the dialog, then Save
+  or Save As. Unknown keys, `X-*` keys, locale keys (`Name[zh_CN]`, …), `Desktop Action` sections
+  and comments are preserved on save.
 
 Arguments are real desktop-entry arguments, not a shell command; the Exec value is quoted and
 escaped per the specification. Field codes such as `%f`, `%U` or `%%` survive a round trip. An
@@ -96,6 +99,7 @@ src/                  Svelte 5 frontend (views in src/lib/components)
 src-tauri/src/desktop_entry/   parser / serializer / exec / fields / validation
 src-tauri/src/filesystem.rs    XDG resolution, atomic writes
 src-tauri/src/icons.rs         bounded "find nearby icons" scan
+src-tauri/src/locations.rs     well-known desktop entry directories (read-only)
 src-tauri/src/commands.rs      the narrow Tauri command API
 src-tauri/tests/      round-trip fixtures and command integration tests
 ```
