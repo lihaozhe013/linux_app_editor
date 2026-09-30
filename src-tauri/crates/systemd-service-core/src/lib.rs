@@ -199,11 +199,23 @@ pub fn systemd_paths(scope: Scope) -> Vec<PathBuf> {
 }
 
 fn is_user_config(path: &Path) -> bool {
-    config_home().is_some_and(|home| path.starts_with(home.join("systemd/user")))
+    config_home().is_some_and(|home| path_is_within(path, &home.join("systemd/user")))
 }
 
 fn is_system_config(path: &Path) -> bool {
-    path.starts_with("/etc/systemd/system")
+    path_is_within(path, Path::new("/etc/systemd/system"))
+}
+
+fn path_is_within(path: &Path, directory: &Path) -> bool {
+    if path.starts_with(directory) {
+        return true;
+    }
+    fs::canonicalize(path)
+        .ok()
+        .zip(fs::canonicalize(directory).ok())
+        .is_some_and(|(resolved_path, resolved_directory)| {
+            resolved_path.starts_with(resolved_directory)
+        })
 }
 
 fn is_config_path(path: &Path, scope: Scope) -> bool {
@@ -295,6 +307,14 @@ fn list_services_from_paths(
 }
 
 pub fn open_service(path: &Path, scope: Scope) -> Result<ServiceDocument, ServiceError> {
+    open_service_with_paths(path, scope, &systemd_paths(scope))
+}
+
+fn open_service_with_paths(
+    path: &Path,
+    scope: Scope,
+    unit_paths: &[PathBuf],
+) -> Result<ServiceDocument, ServiceError> {
     let unit_name = unit_name_from(path)
         .ok_or_else(|| ServiceError::InvalidUnitName(path.display().to_string()))?
         .to_string();
@@ -305,9 +325,9 @@ pub fn open_service(path: &Path, scope: Scope) -> Result<ServiceDocument, Servic
         return Err(ServiceError::Masked(path.to_path_buf()));
     }
     let source_contents = fs::read_to_string(path).map_err(|error| io_error(path, error))?;
-    let is_known_path = systemd_paths(scope)
+    let is_known_path = unit_paths
         .iter()
-        .any(|directory| path.starts_with(directory));
+        .any(|directory| path_is_within(path, directory));
     let is_drop_in = is_known_path && !is_config_path(path, scope);
     let target_path = if is_drop_in {
         config_dir(scope)?.join(format!("{unit_name}.d/{EDITOR_DROP_IN}"))
@@ -766,6 +786,37 @@ mod tests {
                 .contains("Description=first\nDescription=last")
         );
         assert!(document.contents.contains("X-Custom=yes"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn opens_symlinked_vendor_directory_as_a_drop_in() {
+        use std::os::unix::fs::symlink;
+
+        let directory = tempfile::tempdir().unwrap();
+        let vendor = directory.path().join("vendor");
+        let alias = directory.path().join("alias");
+        fs::create_dir(&vendor).unwrap();
+        symlink(&vendor, &alias).unwrap();
+        let unit_name = format!("editor-vendor-alias-{}.service", std::process::id());
+        let source = vendor.join(&unit_name);
+        fs::write(&source, "[Service]\nExecStart=/usr/bin/true\n").unwrap();
+
+        let document = open_service_with_paths(
+            &alias.join(&unit_name),
+            Scope::System,
+            std::slice::from_ref(&vendor),
+        )
+        .unwrap();
+
+        assert!(document.is_drop_in);
+        assert_eq!(document.source_path, alias.join(&unit_name));
+        assert_eq!(
+            document.target_path,
+            Path::new("/etc/systemd/system")
+                .join(format!("{unit_name}.d"))
+                .join(EDITOR_DROP_IN)
+        );
     }
 
     #[cfg(unix)]

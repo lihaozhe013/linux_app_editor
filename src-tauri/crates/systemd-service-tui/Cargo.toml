@@ -12,3 +12,7 @@ systemd-service-core = { path = "../systemd-service-core" }
 ratatui = "0.30.2"
 ratatui-textarea = "0.9.2"
 crossterm = "0.29"
+unicode-width = "0.2"
+
+[dev-dependencies]
+tempfile = "3"

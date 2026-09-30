@@ -3750,6 +3750,8 @@ dependencies = [
  "ratatui",
  "ratatui-textarea",
  "systemd-service-core",
+ "tempfile",
+ "unicode-width",
 ]
 
 [[package]]

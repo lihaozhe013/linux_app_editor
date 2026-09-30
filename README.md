@@ -43,8 +43,11 @@ GNOME / KDE / Cinnamon / Xfce / rofi drun launcher
   file untouched. The GUI stages system-scope files and shows the exact `sudo install` command; it
   does not request privilege elevation itself.
 - **Systemd Service TUI** — launch `systemd-service-editor` from a terminal or SSH session. It
-  offers the same browse, create, form, raw edit, validation, save, and reload workflows. Run
-  `sudo systemd-service-editor --scope system` to write machine-wide units directly. Reloading unit
+  offers the same browse, create, form, raw edit, validation, save, and reload workflows. Press `p`
+  in the service list to open an existing `.service` file by absolute path; files outside recognized
+  systemd unit paths are edited in place. Scope defaults to user. Run
+  `sudo systemd-service-editor --scope system` for direct machine-wide edits. Under `sudo`, user
+  scope uses the sudo process environment, which may point to root's user-unit paths. Reloading unit
   files does not start, stop, or restart a service.
 
 Arguments are real desktop-entry arguments, not a shell command; the Exec value is quoted and

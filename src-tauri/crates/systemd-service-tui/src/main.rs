@@ -1,3 +1,4 @@
+use std::fs;
 use std::io;
 use std::path::PathBuf;
 
@@ -12,6 +13,7 @@ use systemd_service_core::unit_text::{self, FormProjection, ServiceForm};
 use systemd_service_core::{
     self as core, Diagnostic, SaveOutcome, Scope, ServiceDocument, ServiceItem, Severity,
 };
+use unicode_width::UnicodeWidthStr;
 
 const FORM_FIELDS: [(&str, &str); 9] = [
     ("description", "Description"),
@@ -69,6 +71,7 @@ struct Prompt {
 enum PromptAction {
     Search,
     Create,
+    OpenPath,
 }
 
 impl App {
@@ -136,6 +139,12 @@ impl App {
 
     fn open(&mut self, path: PathBuf) -> Result<(), String> {
         let document = core::open_service(&path, self.scope).map_err(|e| e.to_string())?;
+        self.set_document(document);
+        Ok(())
+    }
+
+    fn open_path(&mut self, path: &str) -> Result<(), String> {
+        let document = open_service_path(path, self.scope)?;
         self.set_document(document);
         Ok(())
     }
@@ -370,6 +379,7 @@ impl App {
         let (label, value) = match action {
             PromptAction::Search => ("Search", self.filter.clone()),
             PromptAction::Create => ("New service name", String::new()),
+            PromptAction::OpenPath => ("Absolute .service path", String::new()),
         };
         self.prompt = Some(Prompt {
             label,
@@ -391,8 +401,48 @@ impl App {
                 Ok(document) => self.set_document(document),
                 Err(error) => self.message = error.to_string(),
             },
+            PromptAction::OpenPath => {
+                if let Err(error) = self.open_path(&prompt.value) {
+                    self.message = error;
+                }
+            }
         }
     }
+}
+
+fn open_service_path(input: &str, scope: Scope) -> Result<ServiceDocument, String> {
+    if input.is_empty() {
+        return Err("Enter an absolute path to an existing .service file.".into());
+    }
+    let path = PathBuf::from(input);
+    if !path.is_absolute() {
+        return Err("Service file path must be absolute.".into());
+    }
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| "Service file path must end with a valid .service filename.".to_string())?;
+    if !file_name.ends_with(".service") {
+        return Err("Path must point to a .service file.".into());
+    }
+    core::validate_unit_name(file_name)
+        .map_err(|_| format!("Invalid .service filename: {file_name}"))?;
+
+    let metadata = fs::symlink_metadata(&path).map_err(|error| match error.kind() {
+        io::ErrorKind::NotFound => format!("Service file not found: {}", path.display()),
+        io::ErrorKind::PermissionDenied => {
+            format!("Permission denied while opening: {}", path.display())
+        }
+        _ => format!("Cannot access {}: {error}", path.display()),
+    })?;
+    if !metadata.file_type().is_symlink() && !metadata.is_file() {
+        return Err(format!(
+            "Path is not a regular service file: {}",
+            path.display()
+        ));
+    }
+
+    core::open_service(&path, scope).map_err(|error| error.to_string())
 }
 
 fn textarea_from(text: &str) -> TextArea<'static> {
@@ -422,9 +472,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn parse_args() -> Result<(Scope, Option<String>), Box<dyn std::error::Error>> {
+    parse_args_from(std::env::args().skip(1))
+}
+
+fn parse_args_from(
+    args: impl IntoIterator<Item = String>,
+) -> Result<(Scope, Option<String>), Box<dyn std::error::Error>> {
     let mut scope = Scope::User;
     let mut unit = None;
-    let mut args = std::env::args().skip(1);
+    let mut args = args.into_iter();
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--scope" => {
@@ -436,7 +492,9 @@ fn parse_args() -> Result<(Scope, Option<String>), Box<dyn std::error::Error>> {
             }
             "--unit" => unit = args.next(),
             "--help" | "-h" => {
-                println!("systemd-service-editor [--scope user|system] [--unit NAME]");
+                println!(
+                    "systemd-service-editor [--scope user|system] [--unit NAME]\nPress p in the service list to open an absolute .service path."
+                );
                 std::process::exit(0);
             }
             unknown => return Err(format!("unknown argument: {unknown}").into()),
@@ -543,6 +601,7 @@ fn handle_key(app: &mut App, key: KeyEvent) {
             }
             KeyCode::Char('/') => app.start_prompt(PromptAction::Search),
             KeyCode::Char('c') => app.start_prompt(PromptAction::Create),
+            KeyCode::Char('p') => app.start_prompt(PromptAction::OpenPath),
             KeyCode::Char('u') => {
                 app.scope = if app.scope == Scope::User {
                     Scope::System
@@ -682,7 +741,7 @@ fn draw(frame: &mut Frame, app: &App) {
     let help = if app.document.is_some() {
         "Tab mode · s save · d diff · v verify · r reload · b backup · Esc list · ? help"
     } else {
-        "j/k move · Enter open · / search · c create · u scope · r refresh · q quit · ? help"
+        "j/k move · Enter open · / search · p path · c create · u scope · r refresh · q quit · ? help"
     };
     frame.render_widget(
         Paragraph::new(help).style(Style::default().fg(Color::Gray)),
@@ -887,7 +946,11 @@ fn draw_form(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_prompt(frame: &mut Frame, area: Rect, prompt: &Prompt) {
-    draw_text_prompt(frame, area, prompt.label, &prompt.value);
+    if matches!(prompt.action, PromptAction::OpenPath) {
+        draw_scrollable_text_prompt(frame, area, prompt.label, &prompt.value);
+    } else {
+        draw_text_prompt(frame, area, prompt.label, &prompt.value);
+    }
 }
 
 fn draw_text_prompt(frame: &mut Frame, area: Rect, title: &str, value: &str) {
@@ -903,17 +966,39 @@ fn draw_text_prompt(frame: &mut Frame, area: Rect, title: &str, value: &str) {
     );
 }
 
+fn draw_scrollable_text_prompt(frame: &mut Frame, area: Rect, title: &str, value: &str) {
+    let rect = centered_rect(80, 20, area);
+    let visible_width = rect.width.saturating_sub(2) as usize;
+    let horizontal_offset = prompt_horizontal_offset(value, visible_width);
+    frame.render_widget(Clear, rect);
+    frame.render_widget(
+        Paragraph::new(value).scroll((0, horizontal_offset)).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(format!("{title} · Enter open · Esc cancel")),
+        ),
+        rect,
+    );
+}
+
+fn prompt_horizontal_offset(value: &str, visible_width: usize) -> u16 {
+    UnicodeWidthStr::width(value)
+        .saturating_sub(visible_width)
+        .min(u16::MAX as usize) as u16
+}
+
 fn draw_help(frame: &mut Frame, area: Rect) {
     let rect = centered_rect(72, 55, area);
     frame.render_widget(Clear, rect);
     let lines = [
         "Systemd Service Editor",
         "",
-        "List: j/k move, Enter open, / search, c create, u switch scope, r refresh.",
+        "List: j/k move, Enter open, / search, p open absolute path, c create, u switch scope, r refresh.",
         "Editor: Tab switches form/raw, s saves, d shows diff, v verifies, r reloads, o views source.",
         "Form: j/k select, Enter edits a value, Esc returns to the service list.",
         "Raw: Ctrl+S saves, Ctrl+D shows diff, Tab switches back to the form.",
-        "Vendor files are edited through a drop-in. System writes require sudo.",
+        "Vendor files are edited through a drop-in. For system edits run with sudo and --scope system.",
+        "User scope remains the default; under sudo it uses the sudo process environment.",
         "Reloading units does not start, stop, or restart a service.",
         "",
         "Press Esc or ? to close help.",
@@ -961,4 +1046,131 @@ fn centered_rect(width_percent: u16, height_percent: u16, area: Rect) -> Rect {
             Constraint::Percentage((100 - width_percent) / 2),
         ])
         .split(vertical[1])[1]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn path_prompt_opens_and_saves_external_service_in_place() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("external.service");
+        let original = "[Service]\nExecStart=/usr/bin/true\n";
+        fs::write(&path, original).unwrap();
+
+        let document = open_service_path(path.to_str().unwrap(), Scope::User).unwrap();
+        assert_eq!(document.source_path, path);
+        assert_eq!(document.target_path, path);
+        assert!(!document.is_drop_in);
+
+        let updated = "[Service]\nExecStart=/usr/bin/false\n";
+        core::save_service(&document, updated, false, false).unwrap();
+        assert_eq!(fs::read_to_string(path).unwrap(), updated);
+    }
+
+    #[test]
+    fn path_prompt_rejects_relative_missing_non_service_and_directory_paths() {
+        assert!(
+            open_service_path("relative.service", Scope::User)
+                .unwrap_err()
+                .contains("absolute")
+        );
+
+        let directory = tempfile::tempdir().unwrap();
+        let missing = directory.path().join("missing.service");
+        assert!(
+            open_service_path(missing.to_str().unwrap(), Scope::User)
+                .unwrap_err()
+                .contains("not found")
+        );
+
+        let wrong_extension = directory.path().join("worker.socket");
+        fs::write(&wrong_extension, "[Service]\n").unwrap();
+        assert!(
+            open_service_path(wrong_extension.to_str().unwrap(), Scope::User)
+                .unwrap_err()
+                .contains(".service")
+        );
+
+        let invalid_name = directory.path().join("worker name.service");
+        fs::write(&invalid_name, "[Service]\n").unwrap();
+        assert!(
+            open_service_path(invalid_name.to_str().unwrap(), Scope::User)
+                .unwrap_err()
+                .contains("Invalid .service filename")
+        );
+
+        let not_a_file = directory.path().join("directory.service");
+        fs::create_dir(&not_a_file).unwrap();
+        assert!(
+            open_service_path(not_a_file.to_str().unwrap(), Scope::User)
+                .unwrap_err()
+                .contains("regular service file")
+        );
+    }
+
+    #[test]
+    fn path_shortcut_opens_the_path_prompt() {
+        let mut app = App::new(Scope::User, None).unwrap();
+        handle_key(
+            &mut app,
+            KeyEvent::new(KeyCode::Char('p'), KeyModifiers::NONE),
+        );
+        assert!(matches!(
+            app.prompt.as_ref().map(|prompt| prompt.action),
+            Some(PromptAction::OpenPath)
+        ));
+    }
+
+    #[test]
+    fn long_path_prompt_scrolls_by_display_columns() {
+        let value = "路径/很长的目录/worker.service";
+        let visible_width = 12;
+        assert_eq!(
+            prompt_horizontal_offset(value, visible_width) as usize,
+            UnicodeWidthStr::width(value) - visible_width
+        );
+    }
+
+    #[test]
+    fn invalid_path_prompt_keeps_the_service_list_open() {
+        let mut app = App::new(Scope::User, None).unwrap();
+        app.start_prompt(PromptAction::OpenPath);
+        app.prompt.as_mut().unwrap().value = "relative.service".into();
+        app.finish_prompt();
+
+        assert!(app.document.is_none());
+        assert!(app.prompt.is_none());
+        assert!(app.message.contains("absolute"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn path_prompt_keeps_masked_units_protected() {
+        use std::os::unix::fs::symlink;
+
+        let directory = tempfile::tempdir().unwrap();
+        let masked = directory.path().join("masked.service");
+        symlink("/dev/null", &masked).unwrap();
+
+        assert!(
+            open_service_path(masked.to_str().unwrap(), Scope::System)
+                .unwrap_err()
+                .contains("unit is masked")
+        );
+    }
+
+    #[test]
+    fn scope_cli_default_and_explicit_system_scope_are_preserved() {
+        let (default_scope, unit) = parse_args_from(Vec::<String>::new()).unwrap();
+        assert_eq!(default_scope, Scope::User);
+        assert!(unit.is_none());
+
+        let (system_scope, unit) =
+            parse_args_from(["--scope", "system", "--unit", "worker.service"].map(str::to_string))
+                .unwrap();
+        assert_eq!(system_scope, Scope::System);
+        assert_eq!(unit.as_deref(), Some("worker.service"));
+    }
 }
