@@ -12,6 +12,8 @@
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check .",
     "test": "bun test",
+    "tui:dev": "cargo run --manifest-path src-tauri/Cargo.toml -p systemd-service-tui --",
+    "tui:build": "cargo build --manifest-path src-tauri/Cargo.toml -p systemd-service-tui --release",
     "tauri": "tauri"
   },
   "dependencies": {
