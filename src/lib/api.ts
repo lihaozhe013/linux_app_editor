@@ -11,6 +11,14 @@ import type {
   PathStatus,
   SaveOutcome,
   SaveRequest,
+  ServiceDiagnostic,
+  ServiceDocument,
+  ServiceForm,
+  ServiceFormProjection,
+  ServiceItem,
+  ServiceSaveOutcome,
+  ServiceScope,
+  ServiceVerifyOutcome,
   ValidateFormRequest,
   ValidationItem
 } from './models';
@@ -74,4 +82,66 @@ export function statPath(path: string): Promise<PathStatus> {
 
 export function listDesktopLocations(): Promise<LocationGroup[]> {
   return call('list_desktop_locations');
+}
+
+export function listSystemdServices(scope: ServiceScope): Promise<ServiceItem[]> {
+  return call('list_systemd_services', { scopeName: scope });
+}
+
+export function openSystemdService(path: string, scope: ServiceScope): Promise<ServiceDocument> {
+  return call('open_systemd_service', { path, scopeName: scope });
+}
+
+export function createSystemdService(
+  scope: ServiceScope,
+  unitName: string
+): Promise<ServiceDocument> {
+  return call('create_systemd_service', { scopeName: scope, unitName });
+}
+
+export function projectSystemdForm(
+  contents: string,
+  isDropIn: boolean
+): Promise<ServiceFormProjection> {
+  return call('project_systemd_form', { contents, isDropIn });
+}
+
+export function applySystemdForm(
+  contents: string,
+  form: ServiceForm,
+  dirtyFields: string[],
+  isDropIn: boolean
+): Promise<string> {
+  return call('apply_systemd_form', { contents, form, dirtyFields, isDropIn });
+}
+
+export function validateSystemdDraft(
+  contents: string,
+  isDropIn: boolean
+): Promise<ServiceDiagnostic[]> {
+  return call('validate_systemd_draft', { contents, isDropIn });
+}
+
+export function previewSystemdDiff(before: string, after: string): Promise<string> {
+  return call('preview_systemd_diff', { before, after });
+}
+
+export function saveSystemdService(req: {
+  document: ServiceDocument;
+  contents: string;
+  make_backup: boolean;
+  stage_system: boolean;
+}): Promise<ServiceSaveOutcome> {
+  return call('save_systemd_service', { req });
+}
+
+export function verifySystemdService(
+  path: string,
+  scope: ServiceScope
+): Promise<ServiceVerifyOutcome> {
+  return call('verify_systemd_service', { path, scopeName: scope });
+}
+
+export function reloadSystemd(scope: ServiceScope): Promise<string> {
+  return call('reload_systemd', { scopeName: scope });
 }

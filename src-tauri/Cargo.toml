@@ -5,6 +5,11 @@ description = "A small Linux desktop-entry creator/editor for manually installed
 authors = ["lihaozhe"]
 edition = "2024"
 
+[workspace]
+members = [".", "crates/systemd-service-core", "crates/systemd-service-tui"]
+default-members = ["."]
+resolver = "3"
+
 [lib]
 name = "linux_app_editor_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
@@ -20,3 +25,4 @@ serde_json = "1"
 thiserror = "2.0.21"
 tempfile = "3.27.0"
 which = "8.0.6"
+systemd-service-core = { path = "crates/systemd-service-core" }

@@ -3,9 +3,10 @@
   import EditorView from "./lib/components/EditorView.svelte";
   import ManagedListView from "./lib/components/ManagedListView.svelte";
   import OpenView from "./lib/components/OpenView.svelte";
+  import SystemdServicesView from "./lib/components/SystemdServicesView.svelte";
   import type { OpenedEntry } from "./lib/models";
 
-  let tab = $state<"create" | "managed" | "open">("create");
+  let tab = $state<"create" | "managed" | "open" | "services">("create");
   let editing = $state<OpenedEntry | null>(null);
 
   function openEditor(entry: OpenedEntry) {
@@ -36,6 +37,9 @@
       <button type="button" class:active={tab === "open"} onclick={() => (tab = "open")}>
         Open .desktop
       </button>
+      <button type="button" class:active={tab === "services"} onclick={() => (tab = "services")}>
+        Systemd Services
+      </button>
     </nav>
   </header>
 
@@ -46,8 +50,10 @@
       <CreateView />
     {:else if tab === "managed"}
       <ManagedListView onOpenEntry={openEditor} />
-    {:else}
+    {:else if tab === "open"}
       <OpenView onOpenEntry={openEditor} />
+    {:else}
+      <SystemdServicesView />
     {/if}
   </main>
 </div>

@@ -3,9 +3,13 @@
 A small Linux desktop-entry creator/editor for manually installed applications.
 
 It is not a package manager or application manager. It does not watch your system, detect installed
-packages, or manage launchers created by other software. It does one job: create and edit `.desktop`
-files. The only thing it reads beyond files you open is a fixed list of well-known desktop entry
-directories, on demand, non-recursively and capped.
+packages, or manage launchers created by other software. Its launcher tools create and edit
+`.desktop` files and scan only fixed, well-known desktop-entry directories on demand. The Systemd
+Services page separately browses known systemd unit paths.
+
+The app also includes a **Systemd Services** editor for `.service` units and a separate SSH-friendly
+TUI, `systemd-service-editor`. The GUI and TUI share one Rust editing core. The TUI has no GTK,
+WebKit, or Tauri dependency and runs in a headless SSH session.
 
 ## Why
 
@@ -33,6 +37,15 @@ GNOME / KDE / Cinnamon / Xfce / rofi drun launcher
   name, filename and path. Open any entry from the list, or any file through the dialog, then Save
   or Save As. Unknown keys, `X-*` keys, locale keys (`Name[zh_CN]`, …), `Desktop Action` sections
   and comments are preserved on save.
+- **Systemd Services** — browse, create, validate, and edit user or system `.service` files. Common
+  directives have structured fields; raw unit text handles advanced settings. Review the diff and
+  validation before saving. Editing a vendor unit creates a local drop-in and leaves the package
+  file untouched. The GUI stages system-scope files and shows the exact `sudo install` command; it
+  does not request privilege elevation itself.
+- **Systemd Service TUI** — launch `systemd-service-editor` from a terminal or SSH session. It
+  offers the same browse, create, form, raw edit, validation, save, and reload workflows. Run
+  `sudo systemd-service-editor --scope system` to write machine-wide units directly. Reloading unit
+  files does not start, stop, or restart a service.
 
 Arguments are real desktop-entry arguments, not a shell command; the Exec value is quoted and
 escaped per the specification. Field codes such as `%f`, `%U` or `%%` survive a round trip. An
@@ -40,11 +53,11 @@ optional `desktop-file-validate` check runs when the binary is on `$PATH` — it
 
 ## Risk model
 
-The application intentionally allows editing arbitrary `.desktop` files. Files managed by package
-managers or other software may be overwritten later. The user is responsible for changes to
+The desktop-entry editor intentionally allows editing arbitrary `.desktop` files. Files managed by
+package managers or other software may be overwritten later. The user is responsible for changes to
 externally managed files. When a file lives in a location like `/usr/share/applications` the editor
 shows a non-blocking notice and lets you continue; if writing fails due to permissions, the error is
-shown as-is. There is no sudo, polkit, or any kind of privilege escalation.
+shown as-is. The desktop app does not invoke sudo, polkit, or any other privilege escalation.
 
 ## Versions
 
@@ -56,6 +69,7 @@ shown as-is. There is no sudo, polkit, or any kind of privilege escalation.
 | Vite             | 8.3     | ESNext target, no legacy transpilation                                |
 | Bun              | 1.4     | Sole package manager / script runner (no npm, pnpm, yarn)             |
 | TypeScript (tsc) | 7.0.2   | Native compiler, per project requirements                             |
+| Ratatui          | 0.30.2  | TUI renderer; standalone `systemd-service-editor` binary              |
 | typescript (pkg) | 6.0     | The `typescript` package name is aliased to `@typescript/typescript6` |
 
 TypeScript note: `tsc` is the 7.0 native compiler. TS 7 ships no stable programmatic API yet, so
@@ -87,21 +101,22 @@ bun run test         # bun test (frontend units)
 bun x vite build     # frontend production build
 
 cd src-tauri
-cargo test           # domain, filesystem and command tests
-cargo clippy --all-targets
-cargo fmt
+cargo test --workspace           # desktop app, shared core, and TUI
+cargo clippy --workspace --all-targets
+cargo fmt --all
 ```
 
 ## Nightly builds
 
 Pushing to the `publish` branch runs the release workflow (`.github/workflows/release.yml`): quality
-gates first, then native builds on `ubuntu-24.04` (x86_64) and `ubuntu-24.04-arm` (aarch64). The six
+gates first, then native builds on `ubuntu-24.04` (x86_64) and `ubuntu-24.04-arm` (aarch64). Eight
 assets are published to the rolling `nightly` release as a draft and only published after the full
 asset set is verified and the branch has not moved:
 
 ```text
 linux-app-editor-linux-{x86_64,aarch64}.AppImage   self-contained
 linux-app-editor-linux-{x86_64,aarch64}.tar.gz     bare binary; needs GTK 3 + WebKitGTK 4.1
+systemd-service-editor-linux-{x86_64,aarch64}.tar.gz  headless TUI; no desktop libraries
 linux-app-editor-linux-{x86_64,aarch64}.deb        Debian package (amd64/arm64)
 ```
 
@@ -116,5 +131,7 @@ src-tauri/src/filesystem.rs    XDG resolution, atomic writes
 src-tauri/src/icons.rs         bounded "find nearby icons" scan
 src-tauri/src/locations.rs     well-known desktop entry directories (read-only)
 src-tauri/src/commands.rs      the narrow Tauri command API
+src-tauri/crates/systemd-service-core/  shared systemd unit parsing, validation, and file operations
+src-tauri/crates/systemd-service-tui/   SSH-friendly Ratatui executable
 src-tauri/tests/      round-trip fixtures and command integration tests
 ```

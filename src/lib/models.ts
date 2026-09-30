@@ -169,3 +169,66 @@ export interface EntryForm {
   categoriesText: string;
   filenameStem: string;
 }
+
+export type ServiceScope = 'user' | 'system';
+
+export interface ServiceItem {
+  unit_name: string;
+  path: string;
+  scope: ServiceScope;
+  origin: string;
+  writable: boolean;
+  is_vendor: boolean;
+  masked: boolean;
+}
+
+export interface ServiceDiagnostic {
+  severity: Severity;
+  line: number | null;
+  message: string;
+}
+
+export interface ServiceDocument {
+  scope: ServiceScope;
+  unit_name: string;
+  source_path: string;
+  target_path: string;
+  target_mode: number | null;
+  contents: string;
+  source_contents: string;
+  expected_contents: string | null;
+  is_drop_in: boolean;
+  is_new: boolean;
+  diagnostics: ServiceDiagnostic[];
+}
+
+export interface ServiceForm {
+  description: string;
+  service_type: string;
+  exec_start: string;
+  working_directory: string;
+  user: string;
+  group: string;
+  restart: string;
+  restart_sec: string;
+  wanted_by: string;
+}
+
+export interface ServiceFormProjection {
+  form: ServiceForm;
+  locked_fields: string[];
+}
+
+export interface ServiceSaveOutcome {
+  path: string;
+  target_mode: number | null;
+  staged_path: string | null;
+  install_command: string | null;
+  reload_command: string;
+}
+
+export interface ServiceVerifyOutcome {
+  available: boolean;
+  exit_code: number | null;
+  output: string;
+}

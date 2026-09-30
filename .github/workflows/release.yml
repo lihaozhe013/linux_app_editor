@@ -54,9 +54,16 @@ jobs:
       - name: Rust checks
         working-directory: src-tauri
         run: |
-          cargo fmt --check
-          cargo clippy --locked --all-targets -- -D warnings
-          cargo test --locked
+          cargo fmt --all --check
+          cargo clippy --locked --workspace --all-targets -- -D warnings
+          cargo test --locked --workspace
+          cargo build --locked -p systemd-service-tui
+          if cargo tree --locked -p systemd-service-tui --prefix none --format '{p}' \
+            | cut -d ' ' -f 1 \
+            | rg -qi '^(tauri(-.*)?|gtk([0-9]+)?(-.*)?|webkit.*)$'; then
+            echo "The systemd-service-editor TUI must remain free of desktop dependencies."
+            exit 1
+          fi
 
   build:
     name: Linux ${{ matrix.arch }} packages
@@ -101,7 +108,9 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build AppImage and deb
-        run: bun x tauri build --bundles appimage,deb
+        run: |
+          bun x tauri build --bundles appimage,deb
+          cargo build --locked --release --manifest-path src-tauri/Cargo.toml -p systemd-service-tui
 
       - name: Stage release assets
         shell: bash
@@ -124,6 +133,12 @@ jobs:
           strip "pack/${pkg_dir}/linux-app-editor"
           cp README.md LICENSE "pack/${pkg_dir}/"
           tar -czf "staging/linux-app-editor-linux-${arch}.tar.gz" -C pack "${pkg_dir}"
+
+          tui_dir="systemd-service-editor-linux-${arch}"
+          mkdir -p "pack/${tui_dir}"
+          install -m 0755 src-tauri/target/release/systemd-service-editor "pack/${tui_dir}/systemd-service-editor"
+          cp README.md LICENSE "pack/${tui_dir}/"
+          tar -czf "staging/systemd-service-editor-linux-${arch}.tar.gz" -C pack "${tui_dir}"
 
       - name: Upload Linux packages
         uses: actions/upload-artifact@v7.0.1
@@ -170,16 +185,18 @@ jobs:
             linux-app-editor-linux-x86_64.AppImage
             linux-app-editor-linux-x86_64.deb
             linux-app-editor-linux-x86_64.tar.gz
+            systemd-service-editor-linux-x86_64.tar.gz
             linux-app-editor-linux-aarch64.AppImage
             linux-app-editor-linux-aarch64.deb
             linux-app-editor-linux-aarch64.tar.gz
+            systemd-service-editor-linux-aarch64.tar.gz
           )
           for name in "${expected[@]}"; do
             test -s "staging/${name}"
           done
           actual_count="$(find staging/x86_64 staging/aarch64 -type f | wc -l)"
-          if [[ "${actual_count}" -ne 6 ]]; then
-            echo "Expected six staged packages, found ${actual_count}."
+          if [[ "${actual_count}" -ne 8 ]]; then
+            echo "Expected eight staged packages, found ${actual_count}."
             exit 1
           fi
 
@@ -206,6 +223,7 @@ jobs:
           release_body="Automated nightly build for commit ${COMMIT_SHA}."
           release_body+=$'\n\n- AppImage: self-contained, run directly.'
           release_body+=$'\n- tar.gz: bare binary; requires system GTK 3 and WebKitGTK 4.1 libraries.'
+          release_body+=$'\n- Systemd service editor: standalone SSH-friendly TUI archives for x86_64 and aarch64.'
           release_body+=$'\n- deb: Debian package (amd64/arm64).'
 
           release_id="$(gh api --paginate "${releases_api}?per_page=100" --jq '.[] | select(.tag_name == "nightly") | .id' | head -n 1)"
@@ -259,9 +277,11 @@ jobs:
             staging/linux-app-editor-linux-x86_64.AppImage \
             staging/linux-app-editor-linux-x86_64.deb \
             staging/linux-app-editor-linux-x86_64.tar.gz \
+            staging/systemd-service-editor-linux-x86_64.tar.gz \
             staging/linux-app-editor-linux-aarch64.AppImage \
             staging/linux-app-editor-linux-aarch64.deb \
             staging/linux-app-editor-linux-aarch64.tar.gz \
+            staging/systemd-service-editor-linux-aarch64.tar.gz \
             --repo "${REPOSITORY}" \
             --clobber
 
@@ -269,9 +289,11 @@ jobs:
             linux-app-editor-linux-x86_64.AppImage \
             linux-app-editor-linux-x86_64.deb \
             linux-app-editor-linux-x86_64.tar.gz \
+            systemd-service-editor-linux-x86_64.tar.gz \
             linux-app-editor-linux-aarch64.AppImage \
             linux-app-editor-linux-aarch64.deb \
-            linux-app-editor-linux-aarch64.tar.gz | sort)"
+            linux-app-editor-linux-aarch64.tar.gz \
+            systemd-service-editor-linux-aarch64.tar.gz | sort)"
           actual="$(gh api --paginate "repos/${REPOSITORY}/releases/${RELEASE_ID}/assets?per_page=100" --jq '.[].name' | sort)"
           if [[ "${actual}" != "${expected}" ]]; then
             echo "Release assets do not match the expected set."

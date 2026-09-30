@@ -7,6 +7,7 @@ pub mod error;
 pub mod filesystem;
 pub mod icons;
 pub mod locations;
+pub mod service_commands;
 
 pub fn run() {
     tauri::Builder::default()
@@ -22,6 +23,16 @@ pub fn run() {
             commands::run_desktop_file_validate,
             commands::find_nearby_icons,
             commands::stat_path,
+            service_commands::list_systemd_services,
+            service_commands::open_systemd_service,
+            service_commands::create_systemd_service,
+            service_commands::project_systemd_form,
+            service_commands::apply_systemd_form,
+            service_commands::validate_systemd_draft,
+            service_commands::preview_systemd_diff,
+            service_commands::save_systemd_service,
+            service_commands::verify_systemd_service,
+            service_commands::reload_systemd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
