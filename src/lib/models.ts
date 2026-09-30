@@ -182,6 +182,14 @@ export interface ServiceItem {
   masked: boolean;
 }
 
+export interface ServiceTemplate {
+  id: string;
+  label: string;
+  description: string;
+  scope: ServiceScope;
+  install_target: string;
+}
+
 export interface ServiceDiagnostic {
   severity: Severity;
   line: number | null;

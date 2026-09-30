@@ -42,10 +42,18 @@ GNOME / KDE / Cinnamon / Xfce / rofi drun launcher
   validation before saving. Editing a vendor unit creates a local drop-in and leaves the package
   file untouched. The GUI stages system-scope files and shows the exact `sudo install` command; it
   does not request privilege elevation itself.
+- **Service Templates** — create a service from a template by entering one program path. Two
+  templates ship today, both producing `Type=simple` with `Restart=always`, `RestartSec=5s` and
+  start-rate limits: _Autostart program (user)_ installs into `$XDG_CONFIG_HOME/systemd/user` with
+  `WantedBy=default.target`, and _Autostart program (system, sudo)_ installs into
+  `/etc/systemd/system` with `WantedBy=multi-user.target`. The unit name is suggested from the file
+  name and stays editable. The path must be absolute, existing, and executable, because systemd
+  refuses such a unit at start time. A blank unit stays available for everything else.
 - **Systemd Service TUI** — launch `systemd-service-editor` from a terminal or SSH session. It
   offers the same browse, create, form, raw edit, validation, save, and reload workflows. Press `p`
   in the service list to open an existing `.service` file by absolute path; files outside recognized
-  systemd unit paths are edited in place. Scope defaults to user. Run
+  systemd unit paths are edited in place. Press `t` to create a service from the template matching
+  the active scope: it asks for a program path, then a unit name. Scope defaults to user. Run
   `sudo systemd-service-editor --scope system` for direct machine-wide edits. Under `sudo`, user
   scope uses the sudo process environment, which may point to root's user-unit paths. Reloading unit
   files does not start, stop, or restart a service.
@@ -135,6 +143,7 @@ src-tauri/src/icons.rs         bounded "find nearby icons" scan
 src-tauri/src/locations.rs     well-known desktop entry directories (read-only)
 src-tauri/src/commands.rs      the narrow Tauri command API
 src-tauri/crates/systemd-service-core/  shared systemd unit parsing, validation, and file operations
+src-tauri/crates/systemd-service-core/src/templates.rs  unit templates for create-from-template
 src-tauri/crates/systemd-service-tui/   SSH-friendly Ratatui executable
 src-tauri/tests/      round-trip fixtures and command integration tests
 ```

@@ -18,6 +18,7 @@ import type {
   ServiceItem,
   ServiceSaveOutcome,
   ServiceScope,
+  ServiceTemplate,
   ServiceVerifyOutcome,
   ValidateFormRequest,
   ValidationItem
@@ -97,6 +98,22 @@ export function createSystemdService(
   unitName: string
 ): Promise<ServiceDocument> {
   return call('create_systemd_service', { scopeName: scope, unitName });
+}
+
+export function listSystemdServiceTemplates(): Promise<ServiceTemplate[]> {
+  return call('list_systemd_service_templates');
+}
+
+export function createSystemdServiceFromTemplate(
+  templateId: string,
+  unitName: string,
+  execPath: string
+): Promise<ServiceDocument> {
+  return call('create_systemd_service_from_template', { templateId, unitName, execPath });
+}
+
+export function suggestSystemdUnitName(execPath: string): Promise<string> {
+  return call('suggest_systemd_unit_name', { execPath });
 }
 
 export function projectSystemdForm(

@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use serde::Deserialize;
+use systemd_service_core::templates::ServiceTemplate;
 use systemd_service_core::unit_text::{self, FormProjection, ServiceForm};
 use systemd_service_core::{
     self as service_core, Diagnostic, SaveOutcome, Scope, ServiceDocument, ServiceItem,
@@ -32,6 +33,26 @@ pub fn create_systemd_service(
     unit_name: String,
 ) -> Result<ServiceDocument, String> {
     service_core::create_service(scope(&scope_name)?, &unit_name).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn list_systemd_service_templates() -> Vec<ServiceTemplate> {
+    service_core::templates::templates()
+}
+
+#[tauri::command]
+pub fn create_systemd_service_from_template(
+    template_id: String,
+    unit_name: String,
+    exec_path: String,
+) -> Result<ServiceDocument, String> {
+    service_core::create_service_from_template(&template_id, &unit_name, &exec_path)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn suggest_systemd_unit_name(exec_path: String) -> String {
+    service_core::templates::suggested_unit_name(&exec_path)
 }
 
 #[tauri::command]

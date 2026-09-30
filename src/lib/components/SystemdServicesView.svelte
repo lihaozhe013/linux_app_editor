@@ -4,15 +4,25 @@
   import {
     applySystemdForm,
     createSystemdService,
+    createSystemdServiceFromTemplate,
     listSystemdServices,
+    listSystemdServiceTemplates,
     openSystemdService,
     previewSystemdDiff,
     projectSystemdForm,
     reloadSystemd,
     saveSystemdService,
+    suggestSystemdUnitName,
     validateSystemdDraft,
     verifySystemdService
   } from '../api';
+  import {
+    applyUnitNameSuggestion,
+    editUnitName,
+    emptyTemplateForm,
+    templateScope,
+    validateTemplateForm
+  } from '../serviceTemplate';
   import type {
     AppFailure,
     ServiceDiagnostic,
@@ -21,6 +31,7 @@
     ServiceFormProjection,
     ServiceItem,
     ServiceScope,
+    ServiceTemplate,
     ServiceVerifyOutcome
   } from '../models';
 
@@ -42,6 +53,8 @@
   let error = $state('');
   let search = $state('');
   let newName = $state('');
+  let templates = $state<ServiceTemplate[]>([]);
+  let templateForm = $state(emptyTemplateForm([]));
   let document = $state<ServiceDocument | null>(null);
   let rawContents = $state('');
   let lineEnding = $state('\n');
@@ -59,6 +72,10 @@
   let verifyRunning = $state(false);
   let reloadMessage = $state('');
 
+  const selectedTemplate = $derived(
+    templates.find((item) => item.id === templateForm.templateId) ?? null
+  );
+
   const visibleServices = $derived.by(() => {
     const query = search.trim().toLowerCase();
     return services.filter((item) =>
@@ -69,8 +86,18 @@
   });
 
   onMount(() => {
+    void loadTemplates();
     void refresh();
   });
+
+  async function loadTemplates() {
+    try {
+      templates = await listSystemdServiceTemplates();
+      templateForm = { ...templateForm, ...emptyTemplateForm(templates) };
+    } catch (failure) {
+      error = (failure as AppFailure).message;
+    }
+  }
 
   async function refresh() {
     error = '';
@@ -111,6 +138,19 @@
     }
   }
 
+  async function adoptDocument(created: ServiceDocument) {
+    document = created;
+    rawContents = created.contents;
+    lineEnding = '\n';
+    mode = 'form';
+    preview = '';
+    reviewedDraft = '';
+    installCommand = '';
+    stagedPath = '';
+    await loadProjection(created.contents, created);
+    diagnostics = await validateSystemdDraft(created.contents, created.is_drop_in);
+  }
+
   async function create() {
     error = '';
     const name = newName.trim();
@@ -120,17 +160,69 @@
     }
     try {
       const created = await createSystemdService(scope, name);
-      document = created;
-      rawContents = created.contents;
-      lineEnding = '\n';
-      mode = 'form';
       newName = '';
-      preview = '';
-      reviewedDraft = '';
-      installCommand = '';
-      stagedPath = '';
-      await loadProjection(created.contents, created);
-      diagnostics = await validateSystemdDraft(created.contents, false);
+      await adoptDocument(created);
+    } catch (failure) {
+      error = (failure as AppFailure).message;
+    }
+  }
+
+  /** The template decides the install scope, so align the scope selector with it. */
+  async function selectTemplate(templateId: string) {
+    templateForm = { ...templateForm, templateId };
+    const nextScope = templateScope(templates, templateId);
+    if (nextScope && nextScope !== scope) {
+      scope = nextScope;
+      await refresh();
+    }
+  }
+
+  async function onExecPathInput(path: string) {
+    templateForm = { ...templateForm, execPath: path };
+    if (!path.trim()) {
+      templateForm = { ...templateForm, unitName: '' };
+      return;
+    }
+    try {
+      templateForm = applyUnitNameSuggestion(
+        templateForm,
+        await suggestSystemdUnitName(path)
+      );
+    } catch {
+      // A suggestion is a convenience; the unit name stays editable either way.
+    }
+  }
+
+  async function browseForProgram() {
+    const picked = await ask('Select the program the service should run', {
+      multiple: false,
+      directory: false
+    });
+    if (typeof picked === 'string') await onExecPathInput(picked);
+  }
+
+  async function createFromTemplate() {
+    error = '';
+    const problem = validateTemplateForm(templateForm);
+    if (problem) {
+      error = problem;
+      return;
+    }
+    try {
+      const created = await createSystemdServiceFromTemplate(
+        templateForm.templateId,
+        templateForm.unitName.trim(),
+        templateForm.execPath.trim()
+      );
+      // The template picks the scope; follow it so later saves stage correctly.
+      scope = created.scope;
+      templateForm = {
+        ...templateForm,
+        execPath: '',
+        unitName: '',
+        nameEdited: false
+      };
+      await adoptDocument(created);
     } catch (failure) {
       error = (failure as AppFailure).message;
     }
@@ -326,9 +418,57 @@
     </div>
     <p class="hint">System scope files are staged for review and installed with the displayed sudo command. Service state is never changed.</p>
     {#if error}<div class="banner banner-error">{error}</div>{/if}
+    <details class="service-templates" open>
+      <summary>Create from template</summary>
+      <p class="hint">Pick a template, point it at a program, and systemd handles boot-time startup plus restarts. Everything stays editable afterwards.</p>
+      <div class="template-list">
+        {#each templates as item (item.id)}
+          <label class="template-option" class:selected={item.id === templateForm.templateId}>
+            <input
+              type="radio"
+              name="service-template"
+              value={item.id}
+              checked={item.id === templateForm.templateId}
+              onchange={() => void selectTemplate(item.id)}
+            />
+            <span>
+              <span class="template-label">{item.label}</span>
+              <span class="template-description">{item.description}</span>
+            </span>
+          </label>
+        {/each}
+      </div>
+      <div class="service-create">
+        <input
+          type="text"
+          value={templateForm.execPath}
+          placeholder="/absolute/path/to/program"
+          aria-label="Program path"
+          oninput={(event) => void onExecPathInput(event.currentTarget.value)}
+        />
+        <button type="button" onclick={() => void browseForProgram()}>Browse…</button>
+      </div>
+      <div class="service-create">
+        <input
+          type="text"
+          value={templateForm.unitName}
+          placeholder="example.service"
+          aria-label="Unit name from template"
+          oninput={(event) => (templateForm = editUnitName(templateForm, event.currentTarget.value))}
+        />
+        <button type="button" onclick={() => void createFromTemplate()}>Create from template</button>
+      </div>
+      {#if selectedTemplate}
+        <p class="hint">
+          Writes to <code>{selectedTemplate.scope === 'system' ? '/etc/systemd/system' : '~/.config/systemd/user'}</code>
+          and installs with <code>WantedBy={selectedTemplate.install_target}</code>.
+          {#if selectedTemplate.scope === 'system'}Saving stages the file for a sudo install.{/if}
+        </p>
+      {/if}
+    </details>
     <div class="service-create">
       <input type="text" bind:value={newName} placeholder="example.service" aria-label="New service unit name" />
-      <button type="button" onclick={() => void create()}>Create service</button>
+      <button type="button" onclick={() => void create()}>Create blank service</button>
     </div>
     {#if visibleServices.length === 0}
       <p class="empty">{loading ? 'Loading services…' : 'No service files found in the configured systemd paths.'}</p>
@@ -454,6 +594,13 @@
 <style>
   .service-view { max-width: 900px; }
   .service-toolbar, .service-create { display: flex; align-items: end; gap: 8px; margin: 10px 0; }
+  .service-templates { border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin: 10px 0; }
+  .service-templates summary { cursor: pointer; font-weight: 600; }
+  .template-list { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+  .template-option { display: flex; align-items: start; gap: 8px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+  .template-option.selected { border-color: var(--accent); }
+  .template-label { display: block; font-weight: 600; }
+  .template-description { display: block; color: var(--muted); font-size: 0.9em; }
   .service-toolbar .field { min-width: 180px; }
   .service-toolbar select { font: inherit; padding: 4px 7px; border: 1px solid var(--border); border-radius: 5px; background: var(--bg); color: var(--fg); }
   .service-toolbar .search-input, .service-create input { flex: 1; min-width: 0; }

@@ -59,6 +59,7 @@ struct App {
     raw_trailing_newline: bool,
     raw_line_ending: &'static str,
     discard_armed: bool,
+    template_exec_path: String,
 }
 
 struct Prompt {
@@ -72,6 +73,8 @@ enum PromptAction {
     Search,
     Create,
     OpenPath,
+    TemplatePath,
+    TemplateName,
 }
 
 impl App {
@@ -102,6 +105,7 @@ impl App {
             raw_trailing_newline: true,
             raw_line_ending: "\n",
             discard_armed: false,
+            template_exec_path: String::new(),
         };
         app.refresh()?;
         if let Some(unit_name) = unit {
@@ -380,6 +384,11 @@ impl App {
             PromptAction::Search => ("Search", self.filter.clone()),
             PromptAction::Create => ("New service name", String::new()),
             PromptAction::OpenPath => ("Absolute .service path", String::new()),
+            PromptAction::TemplatePath => ("Program path", String::new()),
+            PromptAction::TemplateName => (
+                "Unit name",
+                core::templates::suggested_unit_name(&self.template_exec_path),
+            ),
         };
         self.prompt = Some(Prompt {
             label,
@@ -404,6 +413,28 @@ impl App {
             PromptAction::OpenPath => {
                 if let Err(error) = self.open_path(&prompt.value) {
                     self.message = error;
+                }
+            }
+            PromptAction::TemplatePath => {
+                self.template_exec_path = prompt.value;
+                if let Err(error) = core::templates::resolve_exec_path(&self.template_exec_path) {
+                    self.message = error.to_string();
+                    return;
+                }
+                self.start_prompt(PromptAction::TemplateName);
+            }
+            PromptAction::TemplateName => {
+                let template_id = core::templates::id_for_scope(self.scope);
+                match core::create_service_from_template(
+                    template_id,
+                    prompt.value.trim(),
+                    self.template_exec_path.trim(),
+                ) {
+                    Ok(document) => {
+                        self.template_exec_path.clear();
+                        self.set_document(document);
+                    }
+                    Err(error) => self.message = error.to_string(),
                 }
             }
         }
@@ -601,6 +632,7 @@ fn handle_key(app: &mut App, key: KeyEvent) {
             }
             KeyCode::Char('/') => app.start_prompt(PromptAction::Search),
             KeyCode::Char('c') => app.start_prompt(PromptAction::Create),
+            KeyCode::Char('t') => app.start_prompt(PromptAction::TemplatePath),
             KeyCode::Char('p') => app.start_prompt(PromptAction::OpenPath),
             KeyCode::Char('u') => {
                 app.scope = if app.scope == Scope::User {
@@ -741,7 +773,7 @@ fn draw(frame: &mut Frame, app: &App) {
     let help = if app.document.is_some() {
         "Tab mode · s save · d diff · v verify · r reload · b backup · Esc list · ? help"
     } else {
-        "j/k move · Enter open · / search · p path · c create · u scope · r refresh · q quit · ? help"
+        "j/k move · Enter open · / search · p path · c blank · t template · u scope · r refresh · q quit · ? help"
     };
     frame.render_widget(
         Paragraph::new(help).style(Style::default().fg(Color::Gray)),
@@ -946,7 +978,10 @@ fn draw_form(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_prompt(frame: &mut Frame, area: Rect, prompt: &Prompt) {
-    if matches!(prompt.action, PromptAction::OpenPath) {
+    if matches!(
+        prompt.action,
+        PromptAction::OpenPath | PromptAction::TemplatePath | PromptAction::TemplateName
+    ) {
         draw_scrollable_text_prompt(frame, area, prompt.label, &prompt.value);
     } else {
         draw_text_prompt(frame, area, prompt.label, &prompt.value);
@@ -993,7 +1028,8 @@ fn draw_help(frame: &mut Frame, area: Rect) {
     let lines = [
         "Systemd Service Editor",
         "",
-        "List: j/k move, Enter open, / search, p open absolute path, c create, u switch scope, r refresh.",
+        "List: j/k move, Enter open, / search, p open absolute path, c blank unit, t autostart template, u switch scope, r refresh.",
+        "Template: t asks for a program path, then a unit name, and builds a restarting autostart unit in the active scope.",
         "Editor: Tab switches form/raw, s saves, d shows diff, v verifies, r reloads, o views source.",
         "Form: j/k select, Enter edits a value, Esc returns to the service list.",
         "Raw: Ctrl+S saves, Ctrl+D shows diff, Tab switches back to the form.",

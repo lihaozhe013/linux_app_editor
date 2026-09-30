@@ -6,6 +6,7 @@ use std::process::Command;
 
 use serde::{Deserialize, Serialize};
 
+pub mod templates;
 pub mod unit_text;
 
 const MAX_UNITS: usize = 500;
@@ -109,6 +110,18 @@ pub enum ServiceError {
     AmbiguousFormField(String),
     #[error("systemd-analyze is unavailable")]
     AnalyzerUnavailable,
+    #[error("unknown service template: {0}")]
+    UnknownTemplate(String),
+    #[error("enter the absolute path of the program the service should run")]
+    EmptyExecPath,
+    #[error("ExecStart must be an absolute path: {0}")]
+    RelativeExecPath(String),
+    #[error("program not found: {0}")]
+    ExecNotFound(PathBuf),
+    #[error("ExecStart must point to a file, not a directory or device: {0}")]
+    ExecNotAFile(PathBuf),
+    #[error("program is not executable: {0}")]
+    ExecNotExecutable(PathBuf),
 }
 
 fn io_error(path: impl Into<PathBuf>, error: io::Error) -> ServiceError {
@@ -368,15 +381,37 @@ fn open_service_with_paths(
 
 pub fn create_service(scope: Scope, unit_name: &str) -> Result<ServiceDocument, ServiceError> {
     validate_unit_name(unit_name)?;
-    let target_path = config_dir(scope)?.join(unit_name);
+    let install_target = match scope {
+        Scope::User => "default.target",
+        Scope::System => "multi-user.target",
+    };
     let contents = format!(
-        "[Unit]\nDescription=New service\n\n[Service]\nType=simple\nExecStart=/usr/bin/true\n\n[Install]\nWantedBy={}\n",
-        if scope == Scope::User {
-            "default.target"
-        } else {
-            "multi-user.target"
-        }
+        "[Unit]\nDescription=New service\n\n[Service]\nType=simple\nExecStart=/usr/bin/true\n\n[Install]\nWantedBy={install_target}\n"
     );
+    new_document(scope, unit_name, contents)
+}
+
+/// Build a new unit from a template. The template decides the install scope,
+/// so the document is created in the template's scope rather than a caller-
+/// supplied one.
+pub fn create_service_from_template(
+    template_id: &str,
+    unit_name: &str,
+    exec_path: &str,
+) -> Result<ServiceDocument, ServiceError> {
+    validate_unit_name(unit_name)?;
+    let template = templates::find(template_id)
+        .ok_or_else(|| ServiceError::UnknownTemplate(template_id.to_string()))?;
+    let contents = templates::render(template_id, unit_name, exec_path)?;
+    new_document(template.scope, unit_name, contents)
+}
+
+fn new_document(
+    scope: Scope,
+    unit_name: &str,
+    contents: String,
+) -> Result<ServiceDocument, ServiceError> {
+    let target_path = config_dir(scope)?.join(unit_name);
     Ok(ServiceDocument {
         scope,
         unit_name: unit_name.to_string(),
