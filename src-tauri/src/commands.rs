@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
+use crate::appimage;
 use crate::desktop_entry::exec::ExecSpec;
 use crate::desktop_entry::fields::{
     FieldPatch, KNOWN_KEYS, SPEC_VERSION_VALUE, apply_managed_markers, apply_patch, escape_icon,
@@ -357,6 +358,14 @@ pub fn run_desktop_file_validate(path: String) -> DfvResult {
 #[tauri::command]
 pub fn find_nearby_icons(executable: String) -> Vec<IconCandidate> {
     scan_nearby_icons(Path::new(&executable))
+}
+
+/// Icon and metadata extraction for AppImage executables. The icon is copied
+/// into the app-owned icons directory so the entry keeps working if the
+/// AppImage moves or is replaced by an updated download with the same name.
+#[tauri::command]
+pub fn extract_appimage_metadata(path: String) -> AppResult<appimage::Extracted> {
+    appimage::extract(Path::new(&path))
 }
 
 #[derive(Debug, Serialize)]

@@ -22,6 +22,14 @@ pub enum AppError {
     Validation(String),
     #[error("file already exists: {0}")]
     AlreadyExists(PathBuf),
+    #[error("not an AppImage file: {0}")]
+    NotAppImage(PathBuf),
+    #[error("{path}: {details}")]
+    UnsupportedAppImageType { path: PathBuf, details: String },
+    #[error("failed to read the AppImage payload: {0}")]
+    AppImageReadFailed(String),
+    #[error("no usable icon found inside the AppImage: {0}")]
+    IconNotFound(PathBuf),
 }
 
 impl AppError {
@@ -43,6 +51,10 @@ impl AppError {
             AppError::InvalidFilename(_) => "invalid-filename",
             AppError::Validation(_) => "validation-failed",
             AppError::AlreadyExists(_) => "already-exists",
+            AppError::NotAppImage(_) => "not-appimage",
+            AppError::UnsupportedAppImageType { .. } => "unsupported-appimage-type",
+            AppError::AppImageReadFailed(_) => "appimage-read-failed",
+            AppError::IconNotFound(_) => "icon-not-found",
         }
     }
 }

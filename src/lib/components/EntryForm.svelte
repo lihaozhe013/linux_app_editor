@@ -1,7 +1,8 @@
 <script lang="ts">
   import { open } from "@tauri-apps/plugin-dialog";
-  import { statPath } from "../api";
-  import type { EntryForm, PathStatus } from "../models";
+  import { extractAppImageMetadata, statPath } from "../api";
+  import type { AppFailure, AppImageExtracted, EntryForm, PathStatus } from "../models";
+  import { baseName, suggestName } from "../nameSuggest";
   import IconField from "./IconField.svelte";
 
   let {
@@ -15,14 +16,28 @@
   } = $props();
 
   let executableStatus: PathStatus | null = $state(null);
+  let appImageInfo: AppImageExtracted | null = $state(null);
+  let appImageError = $state("");
   let statTimer: ReturnType<typeof setTimeout> | undefined;
+  let extractTimer: ReturnType<typeof setTimeout> | undefined;
+  let extractSeq = 0;
+  /** Last icon path this component put into the form; lets a later
+   * extraction replace it while user-set icons are preserved. */
+  let lastExtractedIcon = "";
   const argsPlaceholder = "--profile dev\n--enable-feature";
+
+  const isAppImagePath = (path: string) => /\.appimage$/i.test(path.trim());
 
   $effect(() => {
     const executable = form.executable.trim();
     clearTimeout(statTimer);
+    clearTimeout(extractTimer);
+    // Invalidate any in-flight extraction before scheduling a new one.
+    extractSeq += 1;
     if (executable.length === 0) {
       executableStatus = null;
+      appImageInfo = null;
+      appImageError = "";
       return;
     }
     statTimer = setTimeout(() => {
@@ -30,7 +45,62 @@
         executableStatus = status;
       });
     }, 350);
+    if (isAppImagePath(executable)) {
+      const seq = extractSeq;
+      extractTimer = setTimeout(() => {
+        extractAppImageMetadata(executable)
+          .then((info) => {
+            if (seq === extractSeq) {
+              applyAppImage(executable, info);
+            }
+          })
+          .catch((failure: AppFailure) => {
+            if (seq === extractSeq) {
+              appImageFailed(failure);
+            }
+          });
+      }, 350);
+    } else {
+      appImageInfo = null;
+      appImageError = "";
+    }
   });
+
+  function applyAppImage(executable: string, info: AppImageExtracted) {
+    appImageInfo = info;
+    appImageError = "";
+    // Fill the icon only when the field is untouched: empty, or still
+    // holding what a previous extraction put there. An existing entry's
+    // icon or a manual pick is never clobbered.
+    const icon = form.icon.trim();
+    if (icon.length === 0 || icon === lastExtractedIcon) {
+      lastExtractedIcon = info.icon_path;
+      form.icon = info.icon_path;
+    }
+    // The embedded Name beats the filename-derived suggestion, but must not
+    // override something the user already typed (name change below may be
+    // the untouched suggestion itself, or an empty field).
+    const suggested = suggestName(baseName(executable));
+    if (info.name && (form.name.trim().length === 0 || form.name.trim() === suggested)) {
+      form.name = info.name;
+    }
+    if (form.comment.trim().length === 0 && info.comment) {
+      form.comment = info.comment;
+    }
+    if (form.categoriesText.trim().length === 0 && info.categories.length > 0) {
+      form.categoriesText = info.categories.join(";");
+    }
+  }
+
+  function appImageFailed(failure: AppFailure) {
+    // While the path is still being typed it may simply not exist yet; the
+    // executable chip already reports that.
+    if (failure.code === "not-found") {
+      return;
+    }
+    appImageInfo = null;
+    appImageError = failure.message;
+  }
 
   async function browseExecutable() {
     const path = await open({ multiple: false, title: "Choose executable" });
@@ -75,6 +145,11 @@
       {:else}
         <span class="chip chip-warn">does not currently exist</span>
       {/if}
+    {/if}
+    {#if appImageInfo}
+      <span class="chip chip-ok">AppImage icon and details extracted</span>
+    {:else if appImageError}
+      <span class="chip chip-warn">AppImage: {appImageError}</span>
     {/if}
     <span class="hint">Drag a file onto the window to fill this field.</span>
   </div>

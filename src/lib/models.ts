@@ -54,6 +54,14 @@ export interface AppFailure {
   message: string;
 }
 
+/** Icon + metadata extracted from an AppImage executable. */
+export interface AppImageExtracted {
+  icon_path: string;
+  name: string | null;
+  comment: string | null;
+  categories: string[];
+}
+
 export interface CreateLauncherRequest {
   filename_stem: string;
   name: string;

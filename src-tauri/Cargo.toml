@@ -25,4 +25,6 @@ serde_json = "1"
 thiserror = "2.0.21"
 tempfile = "3.27.0"
 which = "8.0.6"
+backhand = "0.25"
+memchr = "2"
 systemd-service-core = { path = "crates/systemd-service-core" }

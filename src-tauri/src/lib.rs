@@ -1,6 +1,7 @@
 #[cfg(test)]
 pub mod env_lock;
 
+pub mod appimage;
 pub mod commands;
 pub mod desktop_entry;
 pub mod error;
@@ -14,6 +15,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             commands::create_launcher,
+            commands::extract_appimage_metadata,
             commands::open_desktop_entry,
             commands::save_desktop_entry,
             commands::delete_launcher,

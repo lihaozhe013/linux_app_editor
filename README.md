@@ -29,6 +29,12 @@ GNOME / KDE / Cinnamon / Xfce / rofi drun launcher
   Terminal / Comment / Categories, get a spec-compliant `.desktop` file in
   `$XDG_DATA_HOME/applications` (default `~/.local/share/applications`). Executables can be dragged
   onto the window; the file name is used as a Name suggestion you are free to edit.
+- **AppImage support** — when an executable ends in `.AppImage`, its icon and desktop-entry details
+  (Name, Comment, Categories) are read straight out of the embedded SquashFS payload — the AppImage
+  itself is never executed and is not extracted as a whole. The icon is copied to
+  `~/.local/share/linux-app-editor/icons` so the launcher keeps working when the AppImage is moved
+  or replaced by an updated download, and empty form fields are pre-filled from the embedded
+  metadata.
 - **Managed Launchers** — lists the files this tool created (marked with
   `X-LauncherEditor-Managed=true`). Only that directory is read, only non-recursively, and only for
   files carrying the marker.
@@ -138,6 +144,7 @@ The arm64 job requires the free GitHub-hosted arm runners (public repositories).
 ```text
 src/                  Svelte 5 frontend (views in src/lib/components)
 src-tauri/src/desktop_entry/   parser / serializer / exec / fields / validation
+src-tauri/src/appimage.rs      read-only AppImage icon/metadata extraction
 src-tauri/src/filesystem.rs    XDG resolution, atomic writes
 src-tauri/src/icons.rs         bounded "find nearby icons" scan
 src-tauri/src/locations.rs     well-known desktop entry directories (read-only)

@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import type {
   AppFailure,
+  AppImageExtracted,
   CreateLauncherRequest,
   CreateOutcome,
   DfvResult,
@@ -47,6 +48,10 @@ async function call<T>(command: string, args?: Record<string, unknown>): Promise
 
 export function createLauncher(req: CreateLauncherRequest): Promise<CreateOutcome> {
   return call('create_launcher', { req });
+}
+
+export function extractAppImageMetadata(path: string): Promise<AppImageExtracted> {
+  return call('extract_appimage_metadata', { path });
 }
 
 export function openDesktopEntry(path: string): Promise<OpenedEntry> {
