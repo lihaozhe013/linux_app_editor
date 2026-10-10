@@ -38,11 +38,15 @@ GNOME / KDE / Cinnamon / Xfce / rofi drun launcher
 - **Managed Launchers** — lists the files this tool created (marked with
   `X-LauncherEditor-Managed=true`). Only that directory is read, only non-recursively, and only for
   files carrying the marker.
-- **Open .desktop** — a read-only browser of every well-known desktop entry directory (XDG user and
-  system `applications`, autostart, Flatpak, Snap, Nix profiles, `/opt`), with fuzzy search over
-  name, filename and path. Open any entry from the list, or any file through the dialog, then Save
-  or Save As. Unknown keys, `X-*` keys, locale keys (`Name[zh_CN]`, …), `Desktop Action` sections
-  and comments are preserved on save.
+- **Open .desktop** — browse and fuzzy-search well-known desktop entry directories (XDG user and
+  system `applications`, autostart, Flatpak, Snap, Nix profiles, `/opt`). Open any listed entry or
+  file through the dialog, then Save or Save As. Delete listed entries after confirmation, or
+  display safely quoted `rm -f --` and `sudo rm -f --` commands to copy and run manually. The sudo
+  option is available regardless of whether deletion has failed; use it only if needed, authorized,
+  and certain the file should be removed. Commands are never run by the app. Deletion removes only
+  the `.desktop` file, not its application or backup, and a package manager may restore
+  package-provided entries. Unknown keys, `X-*` keys, locale keys (`Name[zh_CN]`, …),
+  `Desktop Action` sections and comments are preserved on save.
 - **Systemd Services** — browse, create, validate, and edit user or system `.service` files. Common
   directives have structured fields; raw unit text handles advanced settings. Review the diff and
   validation before saving. Editing a vendor unit creates a local drop-in and leaves the package

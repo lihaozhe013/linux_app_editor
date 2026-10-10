@@ -238,6 +238,81 @@ fn delete_removes_only_regular_files() {
 }
 
 #[test]
+fn delete_removes_unmanaged_desktop_files_outside_the_applications_directory() {
+    let xdg = XdgGuard::new();
+    let selected = xdg._dir.path().join("unmanaged desktop entry.desktop");
+    let unrelated = xdg._dir.path().join("keep.txt");
+    fs::write(&selected, "[Desktop Entry]\nName=Unmanaged\n").unwrap();
+    fs::write(&unrelated, "keep this file\n").unwrap();
+
+    delete_launcher(selected.to_string_lossy().into_owned()).unwrap();
+
+    assert!(!selected.exists());
+    assert_eq!(fs::read_to_string(&unrelated).unwrap(), "keep this file\n");
+}
+
+#[test]
+fn delete_rejects_non_desktop_files_and_missing_paths() {
+    let xdg = XdgGuard::new();
+    let text_file = xdg._dir.path().join("keep.txt");
+    fs::write(&text_file, "keep this file\n").unwrap();
+
+    assert_eq!(
+        delete_launcher(text_file.to_string_lossy().into_owned())
+            .unwrap_err()
+            .code(),
+        "invalid-filename"
+    );
+    assert_eq!(fs::read_to_string(&text_file).unwrap(), "keep this file\n");
+
+    let missing_file = xdg._dir.path().join("missing.desktop");
+    assert_eq!(
+        delete_launcher(missing_file.to_string_lossy().into_owned())
+            .unwrap_err()
+            .code(),
+        "not-found"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn delete_rejects_symlinks_without_deleting_their_targets() {
+    let xdg = XdgGuard::new();
+    let target = xdg._dir.path().join("keep.desktop");
+    let link = xdg._dir.path().join("link.desktop");
+    fs::write(&target, "keep this file\n").unwrap();
+    std::os::unix::fs::symlink(&target, &link).unwrap();
+
+    assert_eq!(
+        delete_launcher(link.to_string_lossy().into_owned())
+            .unwrap_err()
+            .code(),
+        "io-error"
+    );
+    assert!(link.exists());
+    assert_eq!(fs::read_to_string(&target).unwrap(), "keep this file\n");
+}
+
+#[cfg(unix)]
+#[test]
+fn delete_reports_permission_denied_when_parent_directory_is_not_writable() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let xdg = XdgGuard::new();
+    let parent = xdg._dir.path().join("protected");
+    fs::create_dir(&parent).unwrap();
+    let target = parent.join("protected.desktop");
+    fs::write(&target, "[Desktop Entry]\nName=Protected\n").unwrap();
+    fs::set_permissions(&parent, fs::Permissions::from_mode(0o555)).unwrap();
+
+    let result = delete_launcher(target.to_string_lossy().into_owned());
+
+    fs::set_permissions(&parent, fs::Permissions::from_mode(0o755)).unwrap();
+    assert_eq!(result.unwrap_err().code(), "permission-denied");
+    assert!(target.exists());
+}
+
+#[test]
 fn save_validates_required_fields() {
     let xdg = XdgGuard::new();
     create_launcher(request("validated")).unwrap();

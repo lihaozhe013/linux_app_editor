@@ -198,6 +198,15 @@ pub fn delete_launcher(path: String) -> AppResult<()> {
             std::io::Error::other("refusing to delete: not a regular file"),
         ));
     }
+    if !path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("desktop"))
+    {
+        return Err(AppError::InvalidFilename(
+            path.to_string_lossy().into_owned(),
+        ));
+    }
     std::fs::remove_file(&path).map_err(|e| AppError::io(&path, e))
 }
 
