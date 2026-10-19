@@ -25,6 +25,7 @@
    * extraction replace it while user-set icons are preserved. */
   let lastExtractedIcon = '';
   const argsPlaceholder = '--profile dev\n--enable-feature';
+  let activeSection = $state<'launch' | 'appearance'>('launch');
 
   const isAppImagePath = (path: string) => /\.appimage$/i.test(path.trim());
 
@@ -123,127 +124,148 @@
 </script>
 
 <div class="entry-layout">
-  <section class="entry-card entry-main-card">
-    <div class="section-heading">
-      <span class="section-icon launch-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z" /></svg>
-      </span>
-      <span><strong>Launch details</strong><small>Choose what runs and how it starts.</small></span>
-    </div>
+  <div class="section-switcher" role="group" aria-label="Launcher sections">
+    <button
+      type="button"
+      class:active={activeSection === 'launch'}
+      aria-pressed={activeSection === 'launch'}
+      onclick={() => (activeSection = 'launch')}>Launch details</button
+    >
+    <button
+      type="button"
+      class:active={activeSection === 'appearance'}
+      aria-pressed={activeSection === 'appearance'}
+      onclick={() => (activeSection = 'appearance')}>Menu appearance</button
+    >
+  </div>
 
-    <div class="form-grid entry-fields">
-      <label class="field">
-        <span class="field-label">Application name</span>
-        <input type="text" bind:value={form.name} placeholder="My App" list="common-names" />
-      </label>
-
-      <div class="field field-span">
-        <span class="field-label">Executable</span>
-        <div class="field-row">
-          <input
-            type="text"
-            bind:value={form.executable}
-            placeholder="/home/user/dev/foo/dist/foo"
-            spellcheck="false"
-          />
-          <button type="button" onclick={browseExecutable}>Browse</button>
-        </div>
-        {#if executableStatus}
-          {#if executableStatus.exists && executableStatus.is_executable}
-            <span class="chip chip-ok">executable found</span>
-          {:else if executableStatus.is_dir}
-            <span class="chip chip-warn">path is a directory</span>
-          {:else if executableStatus.exists}
-            <span class="chip chip-warn">exists but not executable</span>
-          {:else}
-            <span class="chip chip-warn">does not currently exist</span>
-          {/if}
-        {/if}
-        {#if appImageInfo}
-          <span class="chip chip-ok">AppImage icon and details extracted</span>
-        {:else if appImageError}
-          <span class="chip chip-warn">AppImage: {appImageError}</span>
-        {/if}
-        <span class="hint">Drag a file onto the window to fill this field.</span>
-      </div>
-
-      <label class="field field-span">
-        <span class="field-label">Arguments <span class="label-detail">One per line</span></span>
-        <textarea
-          rows="3"
-          bind:value={form.argumentsText}
-          placeholder={argsPlaceholder}
-          spellcheck="false"></textarea>
-      </label>
-
-      <div class="field field-span">
-        <span class="field-label">Working directory</span>
-        <div class="field-row">
-          <input
-            type="text"
-            bind:value={form.workingDirectory}
-            placeholder="Optional"
-            spellcheck="false"
-          />
-          <button type="button" onclick={browseDirectory}>Browse</button>
-        </div>
-      </div>
-
-      <label class="terminal-option">
-        <input type="checkbox" bind:checked={form.terminal} />
+  {#if activeSection === 'launch'}
+    <section class="entry-card entry-main-card" aria-label="Launch details">
+      <div class="section-heading">
+        <span class="section-icon launch-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z" /></svg>
+        </span>
         <span
-          ><strong>Run in Terminal</strong><small>Open a terminal window when launching.</small
-          ></span
+          ><strong>Launch details</strong><small>Choose what runs and how it starts.</small></span
         >
-      </label>
-    </div>
-  </section>
+      </div>
 
-  <section class="entry-card entry-side-card">
-    <div class="section-heading">
-      <span class="section-icon appearance-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24"
-          ><path
-            d="M12 3.8a8.2 8.2 0 1 0 0 16.4h1.2a1.8 1.8 0 0 0 1.3-3.1 1.4 1.4 0 0 1 1-2.4h1.2A3.5 3.5 0 0 0 20.2 11 8.2 8.2 0 0 0 12 3.8Z"
-          /><path d="M7.8 10h.1m3.3-2.8h.1m4.1 2.8h.1" /></svg
-        >
-      </span>
-      <span><strong>Menu appearance</strong><small>Set how it looks in your app menu.</small></span>
-    </div>
+      <div class="form-grid entry-fields">
+        <label class="field">
+          <span class="field-label">Application name</span>
+          <input type="text" bind:value={form.name} placeholder="My App" list="common-names" />
+        </label>
 
-    <div class="form-grid entry-fields">
-      <IconField {form} />
-
-      <label class="field">
-        <span class="field-label">Description</span>
-        <input type="text" bind:value={form.comment} placeholder="Optional" />
-      </label>
-
-      <label class="field">
-        <span class="field-label">Categories</span>
-        <input
-          type="text"
-          bind:value={form.categoriesText}
-          placeholder="Development;Utility;"
-          spellcheck="false"
-        />
-        <span class="hint">Separate registered categories with semicolons.</span>
-      </label>
-
-      {#if showFilename}
-        <div class="field">
-          <span class="field-label">Desktop filename</span>
+        <div class="field field-span">
+          <span class="field-label">Executable</span>
           <div class="field-row">
             <input
               type="text"
-              bind:value={form.filenameStem}
-              placeholder="my-app"
+              bind:value={form.executable}
+              placeholder="/home/user/dev/foo/dist/foo"
               spellcheck="false"
             />
-            <span class="suffix">.desktop</span>
+            <button type="button" onclick={browseExecutable}>Browse</button>
+          </div>
+          {#if executableStatus}
+            {#if executableStatus.exists && executableStatus.is_executable}
+              <span class="chip chip-ok">executable found</span>
+            {:else if executableStatus.is_dir}
+              <span class="chip chip-warn">path is a directory</span>
+            {:else if executableStatus.exists}
+              <span class="chip chip-warn">exists but not executable</span>
+            {:else}
+              <span class="chip chip-warn">does not currently exist</span>
+            {/if}
+          {/if}
+          {#if appImageInfo}
+            <span class="chip chip-ok">AppImage icon and details extracted</span>
+          {:else if appImageError}
+            <span class="chip chip-warn">AppImage: {appImageError}</span>
+          {/if}
+          <span class="hint">Drag a file onto the window to fill this field.</span>
+        </div>
+
+        <label class="field field-span">
+          <span class="field-label">Arguments <span class="label-detail">One per line</span></span>
+          <textarea
+            rows="3"
+            bind:value={form.argumentsText}
+            placeholder={argsPlaceholder}
+            spellcheck="false"></textarea>
+        </label>
+
+        <div class="field field-span">
+          <span class="field-label">Working directory</span>
+          <div class="field-row">
+            <input
+              type="text"
+              bind:value={form.workingDirectory}
+              placeholder="Optional"
+              spellcheck="false"
+            />
+            <button type="button" onclick={browseDirectory}>Browse</button>
           </div>
         </div>
-      {/if}
-    </div>
-  </section>
+
+        <label class="terminal-option">
+          <input type="checkbox" bind:checked={form.terminal} />
+          <span
+            ><strong>Run in Terminal</strong><small>Open a terminal window when launching.</small
+            ></span
+          >
+        </label>
+      </div>
+    </section>
+  {:else}
+    <section class="entry-card entry-side-card" aria-label="Menu appearance">
+      <div class="section-heading">
+        <span class="section-icon appearance-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"
+            ><path
+              d="M12 3.8a8.2 8.2 0 1 0 0 16.4h1.2a1.8 1.8 0 0 0 1.3-3.1 1.4 1.4 0 0 1 1-2.4h1.2A3.5 3.5 0 0 0 20.2 11 8.2 8.2 0 0 0 12 3.8Z"
+            /><path d="M7.8 10h.1m3.3-2.8h.1m4.1 2.8h.1" /></svg
+          >
+        </span>
+        <span
+          ><strong>Menu appearance</strong><small>Set how it looks in your app menu.</small></span
+        >
+      </div>
+
+      <div class="form-grid entry-fields">
+        <IconField {form} />
+
+        <label class="field">
+          <span class="field-label">Description</span>
+          <input type="text" bind:value={form.comment} placeholder="Optional" />
+        </label>
+
+        <label class="field">
+          <span class="field-label">Categories</span>
+          <input
+            type="text"
+            bind:value={form.categoriesText}
+            placeholder="Development;Utility;"
+            spellcheck="false"
+          />
+          <span class="hint">Separate registered categories with semicolons.</span>
+        </label>
+
+        {#if showFilename}
+          <div class="field">
+            <span class="field-label">Desktop filename</span>
+            <div class="field-row">
+              <input
+                type="text"
+                bind:value={form.filenameStem}
+                placeholder="my-app"
+                spellcheck="false"
+              />
+              <span class="suffix">.desktop</span>
+            </div>
+          </div>
+        {/if}
+      </div>
+    </section>
+  {/if}
 </div>

@@ -48,6 +48,7 @@
   ];
 
   let scope = $state<ServiceScope>('user');
+  let serviceSection = $state<'services' | 'create'>('services');
   let services = $state<ServiceItem[]>([]);
   let loading = $state(false);
   let error = $state('');
@@ -399,7 +400,7 @@
 <svelte:window onkeydown={onFormKeydown} />
 
 {#if !document}
-  <section class="view service-view">
+  <section class="view service-view systemd-list-view">
     <div class="view-header">
       <h2>Systemd Services</h2>
       <button type="button" onclick={() => void refresh()} disabled={loading}>
@@ -414,87 +415,114 @@
           <option value="system">System services</option>
         </select>
       </label>
-      <input class="search-input" type="text" bind:value={search} placeholder="Search service name or path…" />
-    </div>
-    <p class="hint">System scope files are staged for review and installed with the displayed sudo command. Service state is never changed.</p>
-    {#if error}<div class="banner banner-error">{error}</div>{/if}
-    <details class="service-templates" open>
-      <summary>Create from template</summary>
-      <p class="hint">Pick a template, point it at a program, and systemd handles boot-time startup plus restarts. Everything stays editable afterwards.</p>
-      <div class="template-list">
-        {#each templates as item (item.id)}
-          <label class="template-option" class:selected={item.id === templateForm.templateId}>
-            <input
-              type="radio"
-              name="service-template"
-              value={item.id}
-              checked={item.id === templateForm.templateId}
-              onchange={() => void selectTemplate(item.id)}
-            />
-            <span>
-              <span class="template-label">{item.label}</span>
-              <span class="template-description">{item.description}</span>
-            </span>
-          </label>
-        {/each}
-      </div>
-      <div class="service-create">
-        <input
-          type="text"
-          value={templateForm.execPath}
-          placeholder="/absolute/path/to/program"
-          aria-label="Program path"
-          oninput={(event) => void onExecPathInput(event.currentTarget.value)}
-        />
-        <button type="button" onclick={() => void browseForProgram()}>Browse…</button>
-      </div>
-      <div class="service-create">
-        <input
-          type="text"
-          value={templateForm.unitName}
-          placeholder="example.service"
-          aria-label="Unit name from template"
-          oninput={(event) => (templateForm = editUnitName(templateForm, event.currentTarget.value))}
-        />
-        <button type="button" onclick={() => void createFromTemplate()}>Create from template</button>
-      </div>
-      {#if selectedTemplate}
-        <p class="hint">
-          Writes to <code>{selectedTemplate.scope === 'system' ? '/etc/systemd/system' : '~/.config/systemd/user'}</code>
-          and installs with <code>WantedBy={selectedTemplate.install_target}</code>.
-          {#if selectedTemplate.scope === 'system'}Saving stages the file for a sudo install.{/if}
-        </p>
+      {#if serviceSection === 'services'}
+        <input class="search-input" type="text" bind:value={search} placeholder="Search service name or path…" />
       {/if}
-    </details>
-    <div class="service-create">
-      <input type="text" bind:value={newName} placeholder="example.service" aria-label="New service unit name" />
-      <button type="button" onclick={() => void create()}>Create blank service</button>
     </div>
-    {#if visibleServices.length === 0}
+    <div class="section-switcher" role="group" aria-label="Systemd service sections">
+      <button
+        type="button"
+        class:active={serviceSection === 'services'}
+        aria-pressed={serviceSection === 'services'}
+        onclick={() => (serviceSection = 'services')}
+      >Services</button>
+      <button
+        type="button"
+        class:active={serviceSection === 'create'}
+        aria-pressed={serviceSection === 'create'}
+        onclick={() => (serviceSection = 'create')}
+      >Create service</button>
+    </div>
+    {#if serviceSection === 'services'}
+      <p class="hint">System scope files are staged for review and installed with the displayed sudo command. Service state is never changed.</p>
+    {/if}
+    {#if error}<div class="banner banner-error">{error}</div>{/if}
+    {#if serviceSection === 'create'}
+      <div class="systemd-create-panel">
+        <details class="service-templates" open>
+          <summary>Create from template</summary>
+          <p class="hint">Pick a template, point it at a program, and systemd handles boot-time startup plus restarts. Everything stays editable afterwards.</p>
+          <div class="template-list">
+            {#each templates as item (item.id)}
+              <label class="template-option" class:selected={item.id === templateForm.templateId}>
+                <input
+                  type="radio"
+                  name="service-template"
+                  value={item.id}
+                  checked={item.id === templateForm.templateId}
+                  onchange={() => void selectTemplate(item.id)}
+                />
+                <span>
+                  <span class="template-label">{item.label}</span>
+                  <span class="template-description">{item.description}</span>
+                </span>
+              </label>
+            {/each}
+          </div>
+          <div class="service-create">
+            <input
+              type="text"
+              value={templateForm.execPath}
+              placeholder="/absolute/path/to/program"
+              aria-label="Program path"
+              oninput={(event) => void onExecPathInput(event.currentTarget.value)}
+            />
+            <button type="button" onclick={() => void browseForProgram()}>Browse…</button>
+          </div>
+          <div class="service-create">
+            <input
+              type="text"
+              value={templateForm.unitName}
+              placeholder="example.service"
+              aria-label="Unit name from template"
+              oninput={(event) => (templateForm = editUnitName(templateForm, event.currentTarget.value))}
+            />
+            <button type="button" onclick={() => void createFromTemplate()}>Create from template</button>
+          </div>
+          {#if selectedTemplate}
+            <p class="hint">
+              Writes to <code>{selectedTemplate.scope === 'system' ? '/etc/systemd/system' : '~/.config/systemd/user'}</code>
+              and installs with <code>WantedBy={selectedTemplate.install_target}</code>.
+              {#if selectedTemplate.scope === 'system'}Saving stages the file for a sudo install.{/if}
+            </p>
+          {/if}
+        </details>
+        <div class="service-blank-create">
+          <h3>Create a blank service</h3>
+          <p class="hint">Start with an empty unit and fill in its settings in the editor.</p>
+          <div class="service-create">
+            <input type="text" bind:value={newName} placeholder="example.service" aria-label="New service unit name" />
+            <button type="button" onclick={() => void create()}>Create blank service</button>
+          </div>
+        </div>
+      </div>
+    {:else if visibleServices.length === 0}
       <p class="empty">{loading ? 'Loading services…' : 'No service files found in the configured systemd paths.'}</p>
     {:else}
-      <ul class="managed-list">
-        {#each visibleServices as item (item.path)}
-          <li>
-            <button type="button" class="managed-row service-row" onclick={() => void open(item)} disabled={item.masked}>
-              <span class="managed-icon-fallback">S</span>
-              <span class="managed-main">
-                <span class="managed-name">{item.unit_name}</span>
-                <span class="managed-sub">{item.path}</span>
-              </span>
-              <span class="managed-badges">
-                <span class="chip">{item.origin}</span>
-                {#if item.masked}<span class="chip chip-warn">masked</span>{/if}
-                {#if item.is_vendor && !item.masked}<span class="chip">override</span>{/if}
-              </span>
-            </button>
-          </li>
-        {/each}
-      </ul>
+      <div class="service-list-results" role="region" aria-label="Systemd service results">
+        <ul class="managed-list">
+          {#each visibleServices as item (item.path)}
+            <li>
+              <button type="button" class="managed-row service-row" onclick={() => void open(item)} disabled={item.masked}>
+                <span class="managed-icon-fallback">S</span>
+                <span class="managed-main">
+                  <span class="managed-name">{item.unit_name}</span>
+                  <span class="managed-sub">{item.path}</span>
+                </span>
+                <span class="managed-badges">
+                  <span class="chip">{item.origin}</span>
+                  {#if item.masked}<span class="chip chip-warn">masked</span>{/if}
+                  {#if item.is_vendor && !item.masked}<span class="chip">override</span>{/if}
+                </span>
+              </button>
+            </li>
+          {/each}
+        </ul>
+      </div>
     {/if}
   </section>
 {:else}
-  <section class="view service-view">
+  <section class="view service-view service-edit-view">
     <div class="view-header">
       <h2>{document.is_new ? 'Create Service' : 'Edit Service'}</h2>
       <button type="button" onclick={() => void closeEditor()}>Back to services</button>
@@ -511,36 +539,38 @@
     {/if}
     {#if error}<div class="banner banner-error">{error}</div>{/if}
 
-    <div class="service-tabs">
-      <button type="button" class:active={mode === 'form'} onclick={() => void switchMode('form')}>Common fields</button>
-      <button type="button" class:active={mode === 'raw'} onclick={() => void switchMode('raw')}>Raw unit</button>
+    <div class="section-switcher service-tabs" role="group" aria-label="Service editor modes">
+      <button type="button" class:active={mode === 'form'} aria-pressed={mode === 'form'} onclick={() => void switchMode('form')}>Common fields</button>
+      <button type="button" class:active={mode === 'raw'} aria-pressed={mode === 'raw'} onclick={() => void switchMode('raw')}>Raw unit</button>
     </div>
 
-    {#if mode === 'form' && form}
-      <div class="form-grid service-form">
-        {#each formFields as [field, label, section] (field)}
-          <label class="field">
-            <span class="field-label">{label} <span class="suffix">[{section}]</span></span>
-            <input
-              type="text"
-              value={form[field]}
-              disabled={lockedFields.includes(field) || (document.is_drop_in && field === 'wanted_by')}
-              oninput={(event) => {
-                form = { ...form, [field]: event.currentTarget.value };
-                markDirty(field);
-              }}
-            />
-            {#if lockedFields.includes(field)}<span class="hint">Repeated or continued directive; edit it in raw mode.</span>{/if}
-            {#if document.is_drop_in && field === 'wanted_by'}<span class="hint">[Install] settings belong in the base unit.</span>{/if}
-          </label>
-        {/each}
-      </div>
-    {:else}
-      <label class="field raw-unit-field">
-        <span class="field-label">Raw systemd unit content</span>
-        <textarea rows="18" spellcheck="false" bind:value={rawContents} oninput={() => { preview = ''; reviewedDraft = ''; installCommand = ''; stagedPath = ''; verifyResult = null; }}></textarea>
-      </label>
-    {/if}
+    <div class="service-editor-fields" role="region" aria-label="Service editor fields">
+      {#if mode === 'form' && form}
+        <div class="form-grid service-form">
+          {#each formFields as [field, label, section] (field)}
+            <label class="field">
+              <span class="field-label">{label} <span class="suffix">[{section}]</span></span>
+              <input
+                type="text"
+                value={form[field]}
+                disabled={lockedFields.includes(field) || (document.is_drop_in && field === 'wanted_by')}
+                oninput={(event) => {
+                  form = { ...form, [field]: event.currentTarget.value };
+                  markDirty(field);
+                }}
+              />
+              {#if lockedFields.includes(field)}<span class="hint">Repeated or continued directive; edit it in raw mode.</span>{/if}
+              {#if document.is_drop_in && field === 'wanted_by'}<span class="hint">[Install] settings belong in the base unit.</span>{/if}
+            </label>
+          {/each}
+        </div>
+      {:else}
+        <label class="field raw-unit-field">
+          <span class="field-label">Raw systemd unit content</span>
+          <textarea rows="18" spellcheck="false" bind:value={rawContents} oninput={() => { preview = ''; reviewedDraft = ''; installCommand = ''; stagedPath = ''; verifyResult = null; }}></textarea>
+        </label>
+      {/if}
+    </div>
 
     <div class="actions">
       <button type="button" class="primary" onclick={() => void save()}>Save (Ctrl+S)</button>

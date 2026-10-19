@@ -1,9 +1,4 @@
 @media (max-width: 1080px) {
-  .entry-layout {
-    grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
-    gap: 14px;
-  }
-
   .entry-card {
     padding: 18px;
   }
@@ -13,7 +8,7 @@
   }
 }
 
-@media (max-width: 820px) {
+@media (max-width: 960px) {
   .sidebar {
     flex-basis: 212px;
   }
@@ -23,10 +18,6 @@
     padding-left: 22px;
   }
 
-  .entry-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .entry-side-card .entry-fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -34,6 +25,7 @@
   .template-list {
     grid-template-columns: minmax(0, 1fr);
   }
+
 }
 
 @media (max-width: 640px) {
@@ -133,7 +125,14 @@
   }
 
   .workspace-content {
+    display: block;
+    overflow: auto;
     padding: 20px 15px 34px;
+  }
+
+  .view {
+    height: auto;
+    min-height: 100%;
   }
 
   .page-heading h2,
@@ -149,6 +148,39 @@
   .entry-card {
     padding: 16px;
     border-radius: 13px;
+  }
+
+  .entry-layout,
+  .entry-card {
+    flex: 0 0 auto;
+    min-height: auto;
+  }
+
+  .create-view .entry-layout,
+  .desktop-entry-editor .entry-layout {
+    overflow: visible;
+  }
+
+  .create-view .entry-card,
+  .desktop-entry-editor .entry-card,
+  .desktop-browser-results,
+  .service-list-results,
+  .systemd-list-view .systemd-create-panel,
+  .service-edit-view .service-editor-fields,
+  .managed-launchers-view .local-list-scroll {
+    overflow: visible;
+  }
+
+  .systemd-list-view .service-templates {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .desktop-entry-editor .validate-box,
+  .service-edit-view .validate-box,
+  .service-edit-view .service-stage-result {
+    max-height: none;
+    overflow: visible;
   }
 
   .entry-main-card .entry-fields,

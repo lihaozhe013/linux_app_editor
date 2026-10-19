@@ -138,7 +138,7 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<section class="view">
+<section class="view desktop-entry-editor">
   <div class="view-header">
     <h2>Edit Desktop Entry</h2>
     <button type="button" onclick={() => void confirmClose()}>Close</button>

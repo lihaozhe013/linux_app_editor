@@ -23,7 +23,7 @@
   let actionError = $state('');
   let actionSuccess = $state('');
   let query = $state('');
-  let searchInput: HTMLInputElement | undefined = $state();
+  let browserSection = $state<'locations' | 'search'>('locations');
   let removalPath = $state('');
   let permissionDeniedPath = $state('');
   let pendingDeletionPath = $state('');
@@ -51,7 +51,6 @@
 
   onMount(() => {
     void refresh();
-    searchInput?.focus();
   });
 
   interface Row {
@@ -91,9 +90,7 @@
 
   const truncated = $derived(matches.length > MAX_SHOWN);
   const shown = $derived(matches.slice(0, MAX_SHOWN));
-  const grouped = $derived(
-    query.trim().length === 0 ? groups.map((group) => ({ group, files: group.files })) : []
-  );
+  const grouped = $derived(groups.map((group) => ({ group, files: group.files })));
 
   async function openRow(file: DesktopFileSummary) {
     openError = '';
@@ -248,7 +245,7 @@
           {#if file.hidden || file.no_display}<span class="chip">hidden</span>{/if}
           {#if file.type_ && file.type_ !== 'Application'}<span class="chip">{file.type_}</span
             >{/if}
-          {#if query.trim().length === 0}<span class="chip">{group.label}</span>{/if}
+          {#if browserSection === 'search'}<span class="chip">{group.label}</span>{/if}
         </span>
       </button>
       <div class="desktop-file-actions">
@@ -306,7 +303,7 @@
   </li>
 {/snippet}
 
-<section class="view">
+<section class="view desktop-browser-view">
   <div class="view-header">
     <h2>Open .desktop</h2>
     <button
@@ -319,21 +316,37 @@
     <button type="button" onclick={() => void chooseFile()}>Choose file…</button>
   </div>
 
-  <input
-    class="search-input"
-    type="text"
-    placeholder="Fuzzy search name, filename or path…"
-    bind:value={query}
-    bind:this={searchInput}
-    onkeydown={onSearchKeydown}
-    spellcheck="false"
-  />
+  <div class="section-switcher" role="group" aria-label="Desktop entry sections">
+    <button
+      type="button"
+      class:active={browserSection === 'locations'}
+      aria-pressed={browserSection === 'locations'}
+      onclick={() => (browserSection = 'locations')}
+    >Browse locations</button>
+    <button
+      type="button"
+      class:active={browserSection === 'search'}
+      aria-pressed={browserSection === 'search'}
+      onclick={() => (browserSection = 'search')}
+    >Search entries</button>
+  </div>
 
-  <p class="hint">
-    Browse well-known desktop entry directories: XDG user and system applications, autostart,
-    Flatpak, Snap, Nix and /opt. Only these fixed locations are scanned. Deleting an entry removes
-    only its .desktop file; package-managed entries may be restored by their package manager.
-  </p>
+  {#if browserSection === 'locations'}
+    <p class="hint">
+      Browse well-known desktop entry directories: XDG user and system applications, autostart,
+      Flatpak, Snap, Nix and /opt. Only these fixed locations are scanned. Deleting an entry removes
+      only its .desktop file; package-managed entries may be restored by their package manager.
+    </p>
+  {:else}
+    <input
+      class="search-input"
+      type="text"
+      placeholder="Fuzzy search name, filename or path…"
+      bind:value={query}
+      onkeydown={onSearchKeydown}
+      spellcheck="false"
+    />
+  {/if}
 
   {#if error}
     <div class="banner banner-error">{error}</div>
@@ -350,41 +363,46 @@
 
   {#if !loading && totalFiles === 0}
     <p class="empty">No .desktop files found in the known locations.</p>
-  {:else}
+  {:else if browserSection === 'locations'}
     <p class="hint">
       {groups.length} location(s) · {totalFiles} file(s)
-      {#if query.trim().length > 0}· {matches.length} match(es){/if}
     </p>
+  {:else}
+    <p class="hint">{matches.length} matching entry/entries. Press Enter to open the top result.</p>
   {/if}
 
-  {#if query.trim().length === 0}
-    {#each grouped as { group, files } (group.path)}
-      <div class="location-group">
-        <h3 class="group-header">
-          <span>{group.label}</span>
-          <span class="group-path">{group.path}</span>
-          <span class="chip">{files.length}</span>
-        </h3>
-        {#if group.error}<span class="chip chip-warn">{group.error}</span>{/if}
-        {#if files.length > 0}
-          <ul class="managed-list">
-            {#each files as file (file.path)}
-              {@render fileRow(file, group)}
-            {/each}
-          </ul>
-        {/if}
-      </div>
-    {/each}
-  {:else}
-    <ul class="managed-list">
-      {#each shown as row (row.file.path)}
-        {@render fileRow(row.file, row.group)}
+  {#if browserSection === 'locations'}
+    <div class="desktop-browser-results" role="region" aria-label="Desktop locations">
+      {#each grouped as { group, files } (group.path)}
+        <div class="location-group">
+          <h3 class="group-header">
+            <span>{group.label}</span>
+            <span class="group-path">{group.path}</span>
+            <span class="chip">{files.length}</span>
+          </h3>
+          {#if group.error}<span class="chip chip-warn">{group.error}</span>{/if}
+          {#if files.length > 0}
+            <ul class="managed-list">
+              {#each files as file (file.path)}
+                {@render fileRow(file, group)}
+              {/each}
+            </ul>
+          {/if}
+        </div>
       {/each}
-    </ul>
-    {#if truncated}
-      <p class="hint">
-        Showing the first {MAX_SHOWN} of {matches.length} matches; refine the query.
-      </p>
-    {/if}
+    </div>
+  {:else}
+    <div class="desktop-browser-results" role="region" aria-label="Desktop entry search results">
+      <ul class="managed-list">
+        {#each shown as row (row.file.path)}
+          {@render fileRow(row.file, row.group)}
+        {/each}
+      </ul>
+      {#if truncated}
+        <p class="hint">
+          Showing the first {MAX_SHOWN} of {matches.length} matches; refine the query.
+        </p>
+      {/if}
+    </div>
   {/if}
 </section>

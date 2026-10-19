@@ -232,9 +232,11 @@
 }
 
 .workspace-content {
+  display: flex;
   flex: 1 1 auto;
+  flex-direction: column;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   padding: 30px clamp(22px, 3vw, 42px) 52px;
   scrollbar-color: var(--border) transparent;
   scrollbar-width: thin;

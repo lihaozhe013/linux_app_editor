@@ -7,6 +7,82 @@
   list-style: none;
 }
 
+.managed-launchers-view .local-list-scroll,
+.desktop-browser-results,
+.service-list-results {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 8px;
+  scrollbar-color: var(--border) transparent;
+  scrollbar-width: thin;
+}
+
+.desktop-browser-results .managed-list {
+  margin-top: 10px;
+}
+
+.systemd-list-view .systemd-create-panel {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 8px;
+  scrollbar-color: var(--border) transparent;
+  scrollbar-width: thin;
+}
+
+.systemd-list-view .service-templates summary {
+  padding: 2px 0 7px;
+}
+
+.systemd-list-view .service-blank-create {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.service-blank-create h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.service-blank-create .hint {
+  margin: 5px 0 12px;
+}
+
+.service-edit-view .service-editor-fields {
+  flex: 1 1 auto;
+  min-height: 120px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 8px;
+  scrollbar-color: var(--border) transparent;
+  scrollbar-width: thin;
+}
+
+.service-edit-view .raw-unit-field textarea {
+  min-height: 220px;
+}
+
+.service-edit-view .validate-box {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: min(220px, 28vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.service-edit-view .service-stage-result {
+  flex: 0 1 auto;
+  max-height: 150px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .managed-list > li {
   display: flex;
   align-items: stretch;
@@ -282,29 +358,7 @@
 }
 
 .service-tabs {
-  display: flex;
-  gap: 4px;
-  width: fit-content;
   margin: 17px 0;
-  padding: 3px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--panel);
-}
-
-.service-tabs button {
-  min-height: 31px;
-  padding: 5px 11px;
-  border-color: transparent;
-  background: transparent;
-  color: var(--muted);
-}
-
-.service-tabs button.active {
-  border-color: var(--border);
-  background: var(--surface);
-  color: var(--fg);
-  box-shadow: 0 1px 2px rgb(24 39 59 / 5%);
 }
 
 .service-form {

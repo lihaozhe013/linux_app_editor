@@ -14,6 +14,7 @@
   let items = $state<ManagedItem[]>([]);
   let error = $state("");
   let loading = $state(false);
+  let launcherSection = $state<"all" | "attention">("all");
 
   async function refresh() {
     error = "";
@@ -61,9 +62,14 @@
     icon && icon.startsWith("/") && /\.(png|svg|webp|jpg|jpeg|ico|xpm|bmp)$/i.test(icon)
       ? convertFileSrc(icon)
       : null;
+
+  const attentionCount = $derived(items.filter((item) => item.executable_missing).length);
+  const visibleItems = $derived(
+    launcherSection === "attention" ? items.filter((item) => item.executable_missing) : items,
+  );
 </script>
 
-<section class="view">
+<section class="view managed-launchers-view">
   <div class="view-header">
     <h2>Managed Launchers</h2>
     <button type="button" onclick={() => void refresh()} disabled={loading}>
@@ -75,15 +81,32 @@
     else is scanned.
   </p>
 
+  <div class="section-switcher" role="group" aria-label="Managed launcher sections">
+    <button
+      type="button"
+      class:active={launcherSection === "all"}
+      aria-pressed={launcherSection === "all"}
+      onclick={() => (launcherSection = "all")}
+    >All launchers ({items.length})</button>
+    <button
+      type="button"
+      class:active={launcherSection === "attention"}
+      aria-pressed={launcherSection === "attention"}
+      onclick={() => (launcherSection = "attention")}
+    >Needs attention ({attentionCount})</button>
+  </div>
+
   {#if error}
     <div class="banner banner-error">{error}</div>
   {/if}
 
   {#if items.length === 0 && !loading}
     <p class="empty">No managed launchers yet. Create one in the Create tab.</p>
-  {:else if items.length > 0}
-    <ul class="managed-list">
-      {#each items as item (item.path)}
+  {:else if visibleItems.length === 0 && !loading}
+    <p class="empty">No managed launchers need attention.</p>
+  {:else if visibleItems.length > 0}
+    <ul class="managed-list local-list-scroll" aria-label="Managed launchers">
+      {#each visibleItems as item (item.path)}
         <li>
           <button type="button" class="managed-row" onclick={() => void open(item)}>
             {#if iconSrc(item.icon)}
