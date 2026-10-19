@@ -1,0 +1,236 @@
+@media (max-width: 1080px) {
+  .entry-layout {
+    grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+    gap: 14px;
+  }
+
+  .entry-card {
+    padding: 18px;
+  }
+
+  .managed-badges {
+    max-width: 190px;
+  }
+}
+
+@media (max-width: 820px) {
+  .sidebar {
+    flex-basis: 212px;
+  }
+
+  .workspace-content {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+
+  .entry-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .entry-side-card .entry-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .template-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    flex: 0 0 auto;
+    padding: 10px 12px 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .brand-lockup {
+    gap: 9px;
+    padding: 0 2px 10px;
+  }
+
+  .brand-mark {
+    flex-basis: 34px;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+
+  .brand-mark svg {
+    width: 25px;
+    height: 25px;
+  }
+
+  .brand-copy strong {
+    font-size: 13px;
+  }
+
+  .brand-copy span {
+    font-size: 10px;
+  }
+
+  .sidebar-section-label,
+  .sidebar-spacer,
+  .sidebar-footer {
+    display: none;
+  }
+
+  .side-nav {
+    flex-direction: row;
+    gap: 5px;
+    margin-top: 0;
+    overflow-x: auto;
+  }
+
+  .side-nav + .system-label + .side-nav {
+    margin-top: 5px;
+  }
+
+  .side-nav button {
+    width: auto;
+    min-height: 36px;
+    flex: 1 0 auto;
+    justify-content: center;
+    gap: 7px;
+    padding: 0 9px;
+    font-size: 11px;
+  }
+
+  .side-nav button svg {
+    flex-basis: 16px;
+    width: 16px;
+    height: 16px;
+  }
+
+  .nav-shortcut {
+    display: none;
+  }
+
+  .workspace {
+    min-height: 0;
+  }
+
+  .workspace-bar {
+    flex-basis: 46px;
+    padding: 0 15px;
+  }
+
+  .breadcrumb {
+    gap: 6px;
+    font-size: 11px;
+  }
+
+  .workspace-badge {
+    gap: 0;
+  }
+
+  .workspace-badge span {
+    display: none;
+  }
+
+  .workspace-content {
+    padding: 20px 15px 34px;
+  }
+
+  .page-heading h2,
+  .view-header h2,
+  .view > h2 {
+    font-size: 22px;
+  }
+
+  .page-heading {
+    margin-bottom: 18px;
+  }
+
+  .entry-card {
+    padding: 16px;
+    border-radius: 13px;
+  }
+
+  .entry-main-card .entry-fields,
+  .entry-side-card .entry-fields,
+  .service-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .field-span,
+  .service-form .field:nth-child(3) {
+    grid-column: auto;
+  }
+
+  .view-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .view-header h2 {
+    width: 100%;
+  }
+
+  .managed-list > li,
+  .desktop-file-row {
+    gap: 6px;
+  }
+
+  .managed-row {
+    min-height: 60px;
+    gap: 9px;
+    padding: 8px 10px;
+  }
+
+  .managed-badges {
+    display: none;
+  }
+
+  .group-header {
+    flex-wrap: wrap;
+  }
+
+  .group-path {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .service-toolbar,
+  .service-create {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .service-toolbar .field {
+    min-width: 0;
+  }
+
+  .actions {
+    align-items: stretch;
+  }
+
+  .actions > button {
+    flex: 1 1 auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .desktop-file-row {
+    flex-direction: column;
+  }
+
+  .desktop-file-actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,18 +1,18 @@
 <script lang="ts">
-  import { ask } from "@tauri-apps/plugin-dialog";
-  import { onMount } from "svelte";
-  import { createLauncher } from "../api";
-  import { emptyForm, formToExec, parseCategoriesText, nullableText } from "../formUtils";
-  import type { AppFailure, CreateOutcome, ValidationItem } from "../models";
-  import { baseName, suggestFilenameStem, suggestName } from "../nameSuggest";
-  import { onFileDrop } from "../drop";
-  import EntryForm from "./EntryForm.svelte";
-  import ValidationList from "./ValidationList.svelte";
+  import { ask } from '@tauri-apps/plugin-dialog';
+  import { onMount } from 'svelte';
+  import { createLauncher } from '../api';
+  import { emptyForm, formToExec, parseCategoriesText, nullableText } from '../formUtils';
+  import type { AppFailure, CreateOutcome, ValidationItem } from '../models';
+  import { baseName, suggestFilenameStem, suggestName } from '../nameSuggest';
+  import { onFileDrop } from '../drop';
+  import EntryForm from './EntryForm.svelte';
+  import ValidationList from './ValidationList.svelte';
 
   let form = $state(emptyForm());
   let warnings = $state<ValidationItem[]>([]);
-  let createdPath = $state("");
-  let error = $state("");
+  let createdPath = $state('');
+  let error = $state('');
 
   function executableChosen(path: string) {
     if (form.name.trim().length === 0) {
@@ -26,7 +26,7 @@
   onMount(() => {
     const dispose = onFileDrop((paths) => {
       const first = paths[0];
-      if (typeof first === "string" && first.length > 0) {
+      if (typeof first === 'string' && first.length > 0) {
         form.executable = first;
         executableChosen(first);
       }
@@ -37,8 +37,8 @@
   });
 
   async function create(overwrite: boolean) {
-    error = "";
-    createdPath = "";
+    error = '';
+    createdPath = '';
     warnings = [];
     try {
       const outcome: CreateOutcome = await createLauncher({
@@ -49,19 +49,18 @@
         working_directory: nullableText(form.workingDirectory),
         terminal: form.terminal,
         comment: nullableText(form.comment),
-        categories: form.categoriesText.trim().length > 0
-          ? parseCategoriesText(form.categoriesText)
-          : null,
-        overwrite,
+        categories:
+          form.categoriesText.trim().length > 0 ? parseCategoriesText(form.categoriesText) : null,
+        overwrite
       });
       createdPath = outcome.path;
       warnings = outcome.warnings;
     } catch (e) {
       const failure = e as AppFailure;
-      if (failure.code === "already-exists" && !overwrite) {
+      if (failure.code === 'already-exists' && !overwrite) {
         const confirmed = await ask(`${failure.message}\n\nOverwrite it?`, {
-          title: "File already exists",
-          kind: "warning",
+          title: 'File already exists',
+          kind: 'warning'
         });
         if (confirmed) {
           await create(true);
@@ -73,8 +72,14 @@
   }
 </script>
 
-<section class="view">
-  <h2>Create Launcher</h2>
+<section class="view create-view">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">DESKTOP ENTRY</span>
+      <h2>Create launcher</h2>
+      <p>Create a menu shortcut for an application on this device.</p>
+    </div>
+  </div>
 
   {#if error}
     <div class="banner banner-error">{error}</div>
@@ -82,7 +87,7 @@
   {#if createdPath}
     <div class="banner banner-ok">
       Created {createdPath}
-      <button type="button" class="link" onclick={() => (createdPath = "")}>dismiss</button>
+      <button type="button" class="link" onclick={() => (createdPath = '')}>dismiss</button>
     </div>
   {/if}
   <ValidationList items={warnings} />

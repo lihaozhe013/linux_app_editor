@@ -1,0 +1,344 @@
+.managed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.managed-list > li {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+
+.managed-row {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 68px;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-color: var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  text-align: left;
+}
+
+.managed-row:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--surface);
+  box-shadow: 0 2px 9px rgb(24 39 59 / 6%);
+}
+
+.managed-row img {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.managed-icon-fallback {
+  display: flex;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.managed-main {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.managed-name {
+  overflow: hidden;
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 620;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.managed-sub {
+  overflow: hidden;
+  color: var(--muted);
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.managed-badges {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.managed-list .danger {
+  align-self: center;
+  flex: 0 0 auto;
+}
+
+.validate-box {
+  margin-top: 22px;
+  padding: 17px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.validate-box .view-header {
+  margin-bottom: 11px;
+}
+
+.dfv-output {
+  overflow: auto;
+  margin: 10px 0 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--fg);
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.search-input {
+  min-height: 42px !important;
+  margin: 0 0 8px;
+}
+
+.location-group {
+  margin-top: 22px;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 9px;
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.group-path {
+  overflow: hidden;
+  margin-left: auto;
+  color: var(--muted);
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.managed-list > li.desktop-file-item {
+  display: block;
+}
+
+.desktop-file-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.desktop-file-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.desktop-file-command {
+  padding: 2px 14px 12px;
+  border: 1px solid var(--border);
+  border-top: 0;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: var(--panel);
+}
+
+.desktop-file-command .hint {
+  margin: 8px 0;
+}
+
+.desktop-removal-command {
+  user-select: text;
+  overflow-wrap: anywhere;
+}
+
+.service-view {
+  max-width: 1180px;
+}
+
+.service-toolbar,
+.service-create {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  margin: 13px 0;
+}
+
+.service-templates {
+  margin: 16px 0;
+  padding: 15px 17px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.service-templates summary {
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.service-templates > .hint {
+  margin: 8px 0 12px;
+}
+
+.template-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.template-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  cursor: pointer;
+  transition:
+    border-color var(--ease-ui),
+    background-color var(--ease-ui);
+}
+
+.template-option:hover,
+.template-option.selected {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
+  background: var(--accent-soft);
+}
+
+.template-option input {
+  margin-top: 3px;
+}
+
+.template-label {
+  display: block;
+  color: var(--fg);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.template-description {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.service-toolbar .field {
+  min-width: 190px;
+}
+
+.service-toolbar .search-input,
+.service-create input {
+  flex: 1;
+  min-width: 0;
+}
+
+.service-row {
+  text-align: left;
+}
+
+.service-tabs {
+  display: flex;
+  gap: 4px;
+  width: fit-content;
+  margin: 17px 0;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.service-tabs button {
+  min-height: 31px;
+  padding: 5px 11px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.service-tabs button.active {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: 0 1px 2px rgb(24 39 59 / 5%);
+}
+
+.service-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.service-form .field:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+.raw-unit-field {
+  margin-top: 8px;
+}
+
+.raw-unit-field textarea {
+  min-height: 380px;
+}
+
+.service-stage-result pre {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.source-details {
+  margin: 12px 0;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.source-details summary {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 550;
+  cursor: pointer;
+}

@@ -590,33 +590,3 @@
     </div>
   </section>
 {/if}
-
-<style>
-  .service-view { max-width: 900px; }
-  .service-toolbar, .service-create { display: flex; align-items: end; gap: 8px; margin: 10px 0; }
-  .service-templates { border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin: 10px 0; }
-  .service-templates summary { cursor: pointer; font-weight: 600; }
-  .template-list { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
-  .template-option { display: flex; align-items: start; gap: 8px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
-  .template-option.selected { border-color: var(--accent); }
-  .template-label { display: block; font-weight: 600; }
-  .template-description { display: block; color: var(--muted); font-size: 0.9em; }
-  .service-toolbar .field { min-width: 180px; }
-  .service-toolbar select { font: inherit; padding: 4px 7px; border: 1px solid var(--border); border-radius: 5px; background: var(--bg); color: var(--fg); }
-  .service-toolbar .search-input, .service-create input { flex: 1; min-width: 0; }
-  .service-row { text-align: left; }
-  .service-tabs { display: flex; gap: 4px; margin: 10px 0; }
-  .service-tabs button.active { border-color: var(--accent); font-weight: 600; }
-  .service-form { grid-template-columns: 1fr 1fr; }
-  .service-form .field:nth-child(3) { grid-column: 1 / -1; }
-  .raw-unit-field { margin-top: 8px; }
-  .raw-unit-field textarea { min-height: 360px; }
-  .service-stage-result pre { white-space: pre-wrap; overflow-wrap: anywhere; }
-  .source-details { margin: 8px 0; }
-  .source-details summary { cursor: pointer; color: var(--accent); }
-  @media (max-width: 650px) {
-    .service-form { grid-template-columns: 1fr; }
-    .service-form .field:nth-child(3) { grid-column: auto; }
-    .service-toolbar { align-items: stretch; flex-direction: column; }
-  }
-</style>

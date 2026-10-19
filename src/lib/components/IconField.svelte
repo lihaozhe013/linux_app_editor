@@ -62,7 +62,7 @@
 
 <div class="field">
   <span class="field-label">Icon</span>
-  <div class="field-row">
+  <div class="field-row icon-field-row">
     <input
       type="text"
       bind:value={form.icon}
