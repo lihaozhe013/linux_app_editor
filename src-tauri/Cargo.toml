@@ -6,7 +6,7 @@ authors = ["lihaozhe"]
 edition = "2024"
 
 [workspace]
-members = [".", "crates/systemd-service-core", "crates/systemd-service-tui"]
+members = [".", "crates/systemd-service-core"]
 default-members = ["."]
 resolver = "3"
 

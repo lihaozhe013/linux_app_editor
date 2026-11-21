@@ -99,7 +99,7 @@ pub enum ServiceError {
     #[error("refusing to write through a symbolic link: {0}")]
     Symlink(PathBuf),
     #[error(
-        "system scope writes require administrator permissions; rerun with: sudo systemd-service-editor --scope system"
+        "system scope changes require administrator permissions; run the required command with sudo"
     )]
     SystemPermissionRequired,
     #[error("unit is masked and cannot be edited: {0}")]

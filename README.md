@@ -7,9 +7,8 @@ packages, or manage launchers created by other software. Its launcher tools crea
 `.desktop` files and scan only fixed, well-known desktop-entry directories on demand. The Systemd
 Services page separately browses known systemd unit paths.
 
-The app also includes a **Systemd Services** editor for `.service` units and a separate SSH-friendly
-TUI, `systemd-service-editor`. The GUI and TUI share one Rust editing core. The TUI has no GTK,
-WebKit, or Tauri dependency and runs in a headless SSH session.
+The app also includes a **Systemd Services** editor for `.service` units, backed by a shared Rust
+editing core.
 
 ## Why
 
@@ -59,14 +58,6 @@ GNOME / KDE / Cinnamon / Xfce / rofi drun launcher
   `/etc/systemd/system` with `WantedBy=multi-user.target`. The unit name is suggested from the file
   name and stays editable. The path must be absolute, existing, and executable, because systemd
   refuses such a unit at start time. A blank unit stays available for everything else.
-- **Systemd Service TUI** — launch `systemd-service-editor` from a terminal or SSH session. It
-  offers the same browse, create, form, raw edit, validation, save, and reload workflows. Press `p`
-  in the service list to open an existing `.service` file by absolute path; files outside recognized
-  systemd unit paths are edited in place. Press `t` to create a service from the template matching
-  the active scope: it asks for a program path, then a unit name. Scope defaults to user. Run
-  `sudo systemd-service-editor --scope system` for direct machine-wide edits. Under `sudo`, user
-  scope uses the sudo process environment, which may point to root's user-unit paths. Reloading unit
-  files does not start, stop, or restart a service.
 
 Arguments are real desktop-entry arguments, not a shell command; the Exec value is quoted and
 escaped per the specification. Field codes such as `%f`, `%U` or `%%` survive a round trip. An
@@ -82,23 +73,18 @@ shown as-is. The desktop app does not invoke sudo, polkit, or any other privileg
 
 ## Versions
 
-| Component        | Version | Notes                                                                 |
-| ---------------- | ------- | --------------------------------------------------------------------- |
-| Tauri            | 2.12    | Rust backend, `tauri-plugin-dialog` for native file dialogs           |
-| Rust             | 2024 ed | Built and tested with 1.98                                            |
-| Svelte           | 5.5x    | Runes, no external state management                                   |
-| Vite             | 8.3     | ESNext target, no legacy transpilation                                |
-| Bun              | 1.4     | Sole package manager / script runner (no npm, pnpm, yarn)             |
-| TypeScript (tsc) | 7.0.2   | Native compiler, per project requirements                             |
-| Ratatui          | 0.30.2  | TUI renderer; standalone `systemd-service-editor` binary              |
-| typescript (pkg) | 6.0     | The `typescript` package name is aliased to `@typescript/typescript6` |
+| Component        | Version | Notes                                                        |
+| ---------------- | ------- | ------------------------------------------------------------ |
+| Tauri            | 2.12    | Rust backend, `tauri-plugin-dialog` for native file dialogs  |
+| Rust             | 2024 ed | Built and tested with 1.98                                   |
+| Svelte           | 5.5x    | Runes, no external state management                          |
+| Vite             | 8.3     | ESNext target, no legacy transpilation                       |
+| Bun              | 1.4     | Sole package manager / script runner (no npm, pnpm, yarn)    |
+| TypeScript (tsc) | 7.0.2   | Native compiler, per project requirements                    |
+| Oxlint           | 1.94    | Rust-based linter for `.ts`, `.js`, and Svelte script blocks |
 
-TypeScript note: `tsc` is the 7.0 native compiler. TS 7 ships no stable programmatic API yet, so
-tooling that embeds the compiler (svelte-check, typescript-eslint) cannot use it. Following the
-official side-by-side recommendation from the TypeScript team, the `typescript` package is aliased
-to `@typescript/typescript6` (used only by ESLint's parser), while `tsc` remains 7.0.2 for type
-checking. As a consequence Svelte components are not type-checked by svelte-check; all non-trivial
-frontend logic lives in plain `.ts` modules which `tsc` fully covers.
+TypeScript note: `tsc` is the 7.0 native compiler. Svelte components are not type-checked by
+svelte-check; all non-trivial frontend logic lives in plain `.ts` modules which `tsc` fully covers.
 
 Icon preview reads arbitrary absolute paths through Tauri's asset protocol (scope `**`). This is a
 local, read-only image fetch — the documented trade-off for not restricting which icons can be
@@ -116,13 +102,13 @@ Checks:
 
 ```sh
 bun run check        # tsc --noEmit (TS 7 native)
-bun run lint         # eslint (.ts, .js, .svelte)
+bun run lint         # oxlint (.ts, .js, Svelte script blocks)
 bun run fmt          # prettier
 bun run test         # bun test (frontend units)
 bun x vite build     # frontend production build
 
 cd src-tauri
-cargo test --workspace           # desktop app, shared core, and TUI
+cargo test --workspace           # desktop app and shared core
 cargo clippy --workspace --all-targets
 cargo fmt --all
 ```
@@ -130,14 +116,13 @@ cargo fmt --all
 ## Nightly builds
 
 Pushing to the `publish` branch runs the release workflow (`.github/workflows/release.yml`): quality
-gates first, then native builds on `ubuntu-24.04` (x86_64) and `ubuntu-24.04-arm` (aarch64). Eight
+gates first, then native builds on `ubuntu-24.04` (x86_64) and `ubuntu-24.04-arm` (aarch64). Six
 assets are published to the rolling `nightly` release as a draft and only published after the full
 asset set is verified and the branch has not moved:
 
 ```text
 linux-app-editor-linux-{x86_64,aarch64}.AppImage   self-contained
 linux-app-editor-linux-{x86_64,aarch64}.tar.gz     bare binary; needs GTK 3 + WebKitGTK 4.1
-systemd-service-editor-linux-{x86_64,aarch64}.tar.gz  headless TUI; no desktop libraries
 linux-app-editor-linux-{x86_64,aarch64}.deb        Debian package (amd64/arm64)
 ```
 
@@ -155,6 +140,5 @@ src-tauri/src/locations.rs     well-known desktop entry directories (read-only)
 src-tauri/src/commands.rs      the narrow Tauri command API
 src-tauri/crates/systemd-service-core/  shared systemd unit parsing, validation, and file operations
 src-tauri/crates/systemd-service-core/src/templates.rs  unit templates for create-from-template
-src-tauri/crates/systemd-service-tui/   SSH-friendly Ratatui executable
 src-tauri/tests/      round-trip fixtures and command integration tests
 ```
